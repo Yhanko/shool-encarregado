@@ -17,28 +17,42 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from '../lib/icons';
+import { useAuthStore } from '@/store/authStore';
+import { useParent } from '@/contexts/ParentContext';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
 
-const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'pagamentos', label: 'Pagamentos', icon: CreditCard, badge: 2 },
-  { id: 'notasepauta', label: 'Notas & Pauta', icon: GraduationCap },
-  { id: 'desempenho', label: 'Desempenho', icon: BarChart3 },
-  { id: 'chat', label: 'Mensagens', icon: MessageCircle, badge: 1 },
-  { id: 'notificacoes', label: 'Notificações', icon: Bell, badge: 3 },
-  { id: 'atividades', label: 'Atividades', icon: Calendar },
-  { id: 'assistente', label: 'Assistente IA', icon: Bot },
-  { id: 'perfil', label: 'Perfil', icon: User }
-];
-
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+  const { notificacoes, pagamentos, mensagensNaoLidas } = useParent();
+
+  const unreadNotificationsCount = notificacoes?.filter(n => !n.lida).length || 0;
+  const pendingPaymentsCount = pagamentos?.filter(p => p.status === 'pendente' || p.status === 'atrasado').length || 0;
+  const unreadChatSendersCount = new Set(mensagensNaoLidas?.map(m => m.senderId)).size || 0;
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'pagamentos', label: 'Pagamentos', icon: CreditCard, badge: pendingPaymentsCount > 0 ? pendingPaymentsCount : undefined },
+    { id: 'notasepauta', label: 'Notas & Pauta', icon: GraduationCap },
+    { id: 'desempenho', label: 'Desempenho', icon: BarChart3 },
+    { id: 'chat', label: 'Mensagens', icon: MessageCircle, badge: unreadChatSendersCount > 0 ? unreadChatSendersCount : undefined },
+    { id: 'notificacoes', label: 'Notificações', icon: Bell, badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined },
+    { id: 'atividades', label: 'Atividades', icon: Calendar },
+    { id: 'assistente', label: 'Assistente IA', icon: Bot },
+    { id: 'perfil', label: 'Perfil', icon: User }
+  ];
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className={cn(
@@ -97,6 +111,21 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           ))}
         </nav>
       </ScrollArea>
+
+      {/* Logout Button at the bottom */}
+      <div className="p-4 border-t">
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full flex items-center text-red-600 hover:text-red-700 hover:bg-red-50",
+            collapsed ? "justify-center px-0" : "justify-start"
+          )}
+          onClick={handleLogout}
+        >
+          <LogOut className={cn("h-5 w-5", !collapsed && "mr-3")} />
+          {!collapsed && <span>Sair</span>}
+        </Button>
+      </div>
     </div>
   );
 }

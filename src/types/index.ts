@@ -30,6 +30,7 @@ export interface Nota {
   data: string;
   professorId: string;
   professorNome: string;
+  observacaoProfessor?: string;
 }
 
 export interface Pagamento {
@@ -40,7 +41,7 @@ export interface Pagamento {
   ano: number;
   dataVencimento: string;
   dataPagamento?: string;
-  status: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
+  status: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'processamento';
   educandoId: string;
   recibo?: string;
   metodoPagamento?: string;

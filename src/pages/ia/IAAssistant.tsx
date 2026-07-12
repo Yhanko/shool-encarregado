@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,9 @@ import {
   MessageCircle,
   Heart
 } from '../../lib/icons';
+import { useParent } from '@/contexts/ParentContext';
+import { parentService } from '@/services/api/parentService';
+import { Loader2 } from 'lucide-react';
 
 interface Conversa {
   id: string;
@@ -25,82 +28,130 @@ interface Conversa {
   hora: string;
 }
 
-const conversasExemplo: Conversa[] = [
-  {
-    id: '1',
-    pergunta: 'Como posso ajudar meu filho a melhorar em matemática?',
-    resposta: 'Aqui estão algumas estratégias eficazes para apoiar seu filho em matemática:\n\n1. **Prática regular**: Estabeleça um horário diário de estudo\n2. **Jogos educativos**: Use aplicativos e jogos que tornem a matemática divertida\n3. **Conexão com o cotidiano**: Mostre como a matemática está presente no dia a dia\n4. **Paciência e encorajamento**: Celebre pequenos progressos\n5. **Comunicação com o professor**: Mantenha contato regular para acompanhar o progresso\n\nLembre-se: cada criança tem seu próprio ritmo de aprendizagem!',
-    categoria: 'apoio_academico',
-    hora: '14:30'
-  },
-  {
-    id: '2',
-    pergunta: 'Meu filho está desmotivado com os estudos. O que fazer?',
-    resposta: 'A desmotivação é comum e pode ser superada com as estratégias certas:\n\n• **Identifique a causa**: Converse para entender o que está acontecendo\n• **Estabeleça metas pequenas**: Objetivos alcançáveis geram confiança\n• **Crie um ambiente de estudo**: Espaço organizado e sem distrações\n• **Reconheça esforços**: Valorize o processo, não apenas os resultados\n• **Varie as atividades**: Alterne entre diferentes tipos de estudo\n• **Busque ajuda profissional**: Se necessário, considere apoio psicopedagógico',
-    categoria: 'motivacao',
-    hora: '13:15'
-  }
-];
-
-const sugestoes = [
-  { texto: 'Como criar uma rotina de estudos eficaz?', categoria: 'organizacao' },
-  { texto: 'Meu filho tem dificuldades de concentração', categoria: 'concentracao' },
-  { texto: 'Como lidar com ansiedade antes das provas?', categoria: 'emocional' },
-  { texto: 'Estratégias para melhorar a leitura', categoria: 'leitura' }
-];
-
-const recursosIA = [
-  {
-    titulo: 'Plano de Estudos Personalizado',
-    descricao: 'Crie rotinas de estudo adaptadas ao perfil do seu educando',
-    icon: Target,
-    categoria: 'planejamento'
-  },
-  {
-    titulo: 'Atividades Educativas',
-    descricao: 'Sugestões de jogos e exercícios para reforçar o aprendizado',
-    icon: BookOpen,
-    categoria: 'atividades'
-  },
-  {
-    titulo: 'Apoio Emocional',
-    descricao: 'Orientações para lidar com questões emocionais e motivacionais',
-    icon: Heart,
-    categoria: 'emocional'
-  },
-  {
-    titulo: 'Comunicação Escola-Casa',
-    descricao: 'Dicas para melhorar a parceria com professores e escola',
-    icon: Users,
-    categoria: 'comunicacao'
-  }
-];
-
 export function IAAssistant() {
-  const [conversas, setConversas] = useState<Conversa[]>(conversasExemplo);
+  const { educandos, isLoading: parentLoading } = useParent();
+  const [conversas, setConversas] = useState<Conversa[]>([]);
+  const [sugestoes, setSugestoes] = useState<any[]>([]);
+  const [recursosIA, setRecursosIA] = useState<any[]>([]);
   const [pergunta, setPergunta] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalyses = async () => {
+      if (parentLoading) return;
+      
+      setInitialLoading(true);
+      try {
+        let [fetchedSuggestions, fetchedResources] = await Promise.all([
+          parentService.getAiSuggestions(),
+          parentService.getAiResources()
+        ]);
+        
+        if (!fetchedSuggestions || fetchedSuggestions.length === 0) {
+          fetchedSuggestions = [
+            { texto: 'Quais as melhores estratégias para melhorar o foco e comportamento nas aulas?', categoria: 'Comportamento' },
+            { texto: 'Dicas práticas para participar ativamente no processo de aprendizagem do meu filho.', categoria: 'Participação Ativa' },
+            { texto: 'Como posso apoiar a saúde psicológica e gerir o stress escolar do meu educando?', categoria: 'Saúde Psicológica' },
+            { texto: 'Com base no histórico escolar, que áreas profissionais se adequam mais ao meu filho?', categoria: 'Orientação Vocacional' },
+            { texto: 'Como criar uma rotina saudável de educação e estudos em casa?', categoria: 'Educação em Casa' }
+          ];
+        }
+
+        if (!fetchedResources || fetchedResources.length === 0) {
+          fetchedResources = [
+            { titulo: 'Análise de Tendência Vocacional', descricao: 'Relatório inteligente baseado nas notas para alinhar o futuro profissional.', categoria: 'Carreira', icon: 'Target' },
+            { titulo: 'Guia de Saúde Mental', descricao: 'Sinais de alerta de baixo desempenho, stress e como lidar com eles.', categoria: 'Psicologia', icon: 'Heart' },
+            { titulo: 'Manual de Ensino em Casa', descricao: 'Métodos para melhorar o rendimento escolar fora da escola.', categoria: 'Educação', icon: 'BookOpen' },
+            { titulo: 'Parceria Escola-Família', descricao: 'Estratégias de acompanhamento contínuo e ativo.', categoria: 'Família', icon: 'Users' }
+          ];
+        }
+
+        setSugestoes(fetchedSuggestions);
+        setRecursosIA(fetchedResources);
+        
+        if (educandos.length > 0) {
+          const generatedConversas: Conversa[] = [];
+          
+          for (const educando of educandos) {
+            const analysis = await parentService.getStudentAnalysis(educando.id);
+            
+            let respostaCompleta = `${analysis.summary}\n\n`;
+            if (analysis.strengths && analysis.strengths.length > 0) {
+               respostaCompleta += `**Pontos Fortes:** ${analysis.strengths.join(', ')}\n`;
+            }
+            if (analysis.weaknesses && analysis.weaknesses.length > 0) {
+               respostaCompleta += `**Áreas de Melhoria:** ${analysis.weaknesses.join(', ')}\n`;
+            }
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+               respostaCompleta += `\n**Recomendações:**\n${analysis.recommendations.map((r: string) => `• ${r}`).join('\n')}`;
+            }
+
+            generatedConversas.push({
+              id: `auto-${educando.id}`,
+              pergunta: `Análise automática do desempenho de ${educando.nome}`,
+              resposta: respostaCompleta,
+              categoria: 'análise_desempenho',
+              hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+          
+          setConversas(generatedConversas);
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI analysis', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    fetchAnalyses();
+  }, [educandos, parentLoading]);
 
   const enviarPergunta = async () => {
     if (!pergunta.trim()) return;
 
     setLoading(true);
     
-    // Simular resposta da IA
-    setTimeout(() => {
+    try {
+      // Usar o primeiro educando como contexto principal se existir
+      const studentId = educandos.length > 0 ? educandos[0].id : undefined;
+      const result = await parentService.chatWithAi(pergunta, studentId);
+      
       const novaConversa: Conversa = {
         id: Date.now().toString(),
         pergunta: pergunta,
-        resposta: 'Esta é uma resposta simulada da IA especializada em educação familiar. Em um sistema real, aqui seria integrada uma API de IA que forneceria orientações personalizadas baseadas em pedagogia, psicologia educacional e melhores práticas para apoio familiar no processo de aprendizagem.',
-        categoria: 'geral',
+        resposta: result.resposta,
+        categoria: result.categoria || 'apoio_geral',
         hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       };
       
       setConversas([novaConversa, ...conversas]);
       setPergunta('');
+    } catch(err) {
+      console.error("Erro ao comunicar com a IA:", err);
+      // Fallback in case of error
+      const novaConversa: Conversa = {
+        id: Date.now().toString(),
+        pergunta: pergunta,
+        resposta: 'Desculpe, ocorreu um erro ao contactar o servidor. Por favor, tente novamente.',
+        categoria: 'erro',
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      };
+      setConversas([novaConversa, ...conversas]);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
+
+  if (initialLoading || parentLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">A gerar análise com IA...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -137,7 +188,7 @@ export function IAAssistant() {
               <CardContent className="space-y-4">
                 <div className="flex space-x-2">
                   <Textarea
-                    placeholder="Faça sua pergunta sobre como apoiar seu educando: dificuldades de aprendizagem, motivação, rotina de estudos, relacionamento com professores..."
+                    placeholder="Faça sua pergunta sobre como apoiar seu educando: dificuldades de aprendizagem, motivação, rotina de estudos..."
                     value={pergunta}
                     onChange={(e) => setPergunta(e.target.value)}
                     className="flex-1 min-h-[100px]"
@@ -147,7 +198,7 @@ export function IAAssistant() {
                 <Button 
                   onClick={enviarPergunta} 
                   disabled={loading || !pergunta.trim()}
-                  className="w-full"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {loading ? (
                     <>
@@ -166,9 +217,9 @@ export function IAAssistant() {
                   <div className="space-y-4 pt-4">
                     <Separator />
                     <h3 className="font-semibold">Conversas Recentes</h3>
-                    <ScrollArea className="h-96">
+                    <ScrollArea className="h-96 pr-4">
                       <div className="space-y-4">
-                        {conversas.slice(0, 3).map((conversa) => (
+                        {conversas.map((conversa) => (
                           <div key={conversa.id} className="p-4 border rounded-lg space-y-3">
                             <div className="flex items-start space-x-3">
                               <div className="p-2 bg-blue-100 rounded-full">
@@ -185,7 +236,7 @@ export function IAAssistant() {
                                 <Bot className="h-4 w-4 text-green-600" />
                               </div>
                               <div className="flex-1">
-                                <p className="text-sm whitespace-pre-line">{conversa.resposta}</p>
+                                <p className="text-sm whitespace-pre-line leading-relaxed">{conversa.resposta}</p>
                               </div>
                             </div>
                           </div>
@@ -212,7 +263,7 @@ export function IAAssistant() {
                     <Button
                       key={index}
                       variant="outline"
-                      className="w-full justify-start text-left h-auto p-3"
+                      className="w-full justify-start text-left h-auto p-3 hover:bg-blue-50 hover:text-blue-700"
                       onClick={() => setPergunta(sugestao.texto)}
                     >
                       <div>
@@ -231,25 +282,38 @@ export function IAAssistant() {
 
         <TabsContent value="recursos" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {recursosIA.map((recurso, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <recurso.icon className="mr-2 h-5 w-5 text-blue-600" />
-                    {recurso.titulo}
-                  </CardTitle>
-                  <CardDescription>{recurso.descricao}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline">{recurso.categoria}</Badge>
-                    <Button size="sm">
-                      Usar Recurso
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {recursosIA.map((recurso, index) => {
+              const iconMap: Record<string, any> = {
+                Target,
+                BookOpen,
+                Heart,
+                Users,
+                Bot,
+                Lightbulb,
+                MessageCircle
+              };
+              const IconComponent = iconMap[recurso.icon] || BookOpen;
+
+              return (
+                <Card key={index} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <IconComponent className="mr-2 h-5 w-5 text-blue-600" />
+                      {recurso.titulo}
+                    </CardTitle>
+                    <CardDescription>{recurso.descricao}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">{recurso.categoria}</Badge>
+                      <Button size="sm" variant="outline">
+                        Usar Recurso
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
