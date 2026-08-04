@@ -14,7 +14,6 @@ import {
   Users,
   Eye,
   Check,
-  X,
   Filter,
   MessageCircle,
   AlertTriangle
@@ -65,8 +64,8 @@ export function Notificacoes() {
     }
   };
 
-  const notificacoesFiltradas = filtroTipo === 'todas' 
-    ? notificacoes 
+  const notificacoesFiltradas = filtroTipo === 'todas'
+    ? notificacoes
     : notificacoes.filter(n => n.tipo === filtroTipo);
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
@@ -89,7 +88,7 @@ export function Notificacoes() {
             Mantenha-se informado sobre a vida escolar dos seus educandos
           </p>
         </div>
-        
+
         <div className="flex space-x-2">
           <Button variant="outline" size="sm" onClick={async () => {
             await markAllAsRead();
@@ -177,22 +176,20 @@ export function Notificacoes() {
                     {notificacoesFiltradas.map((notificacao) => {
                       const Icon = getTipoIcon(notificacao.tipo);
                       const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                      
+
                       return (
                         <div
                           key={notificacao.id}
-                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                            !notificacao.lida ? 'border-blue-200 bg-blue-50' : 'hover:bg-muted/50'
-                          } ${
-                            notificacaoSelecionada?.id === notificacao.id ? 'ring-2 ring-blue-500' : ''
-                          }`}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${!notificacao.lida ? 'border-blue-200 bg-blue-50' : 'hover:bg-muted/50'
+                            } ${notificacaoSelecionada?.id === notificacao.id ? 'ring-2 ring-blue-500' : ''
+                            }`}
                           onClick={() => setNotificacaoSelecionada(notificacao)}
                         >
                           <div className="flex items-start space-x-3">
                             <div className={`p-2 rounded-full ${getTipoColor(notificacao.tipo)}`}>
                               <Icon className="h-4 w-4" />
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <h3 className={`font-medium ${!notificacao.lida ? 'text-blue-900' : ''}`}>
@@ -209,11 +206,11 @@ export function Notificacoes() {
                                   )}
                                 </div>
                               </div>
-                              
+
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {notificacao.conteudo}
                               </p>
-                              
+
                               <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center space-x-2">
                                   <Badge variant="outline" className="text-xs">
@@ -355,7 +352,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'pagamento')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg bg-red-50">
                         <h3 className="font-medium">{notificacao.titulo}</h3>
@@ -393,7 +390,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'atividade')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg">
                         <h3 className="font-medium">{notificacao.titulo}</h3>
@@ -431,7 +428,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'nota')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg bg-green-50">
                         <h3 className="font-medium">{notificacao.titulo}</h3>

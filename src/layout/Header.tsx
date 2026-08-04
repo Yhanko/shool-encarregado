@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,9 +15,9 @@ import { useParent } from '@/contexts/ParentContext';
 export function Header() {
   const { user } = useAuthStore();
   const { notificacoes } = useParent();
-  
+
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
-  
+
   const nomeAbreviado = user?.name ? user.name.split(' ')[0] : 'Usuário';
 
   return (
@@ -28,11 +28,11 @@ export function Header() {
             Bem-vindo, {nomeAbreviado}!
           </h2>
           <p className="text-sm text-gray-600">
-            {new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            {new Date().toLocaleDateString('pt-BR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}
           </p>
         </div>
