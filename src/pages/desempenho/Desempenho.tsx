@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,13 +27,42 @@ import {
   AlertCircle,
   CheckCircle,
   BookOpen,
-  Calendar
+  Calendar,
+  Bot
 } from '../../lib/icons';
-import { educandos, desempenho } from '@/data/mockData';
+import { useParent } from '@/contexts/ParentContext';
 import { Educando } from '@/types';
+import { Loader2 } from 'lucide-react';
+import { parentService } from '@/services/api/parentService';
 
 export function Desempenho() {
-  const [educandoSelecionado, setEducandoSelecionado] = useState<Educando>(educandos[0]);
+  const { educandos, desempenhos, isLoading } = useParent();
+  const [educandoSelecionado, setEducandoSelecionado] = useState<Educando | null>(null);
+  const [studentAnalysis, setStudentAnalysis] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  useEffect(() => {
+    if (educandos.length > 0 && !educandoSelecionado) {
+      setEducandoSelecionado(educandos[0]);
+    }
+  }, [educandos, educandoSelecionado]);
+
+  useEffect(() => {
+    if (educandoSelecionado) {
+      const fetchAnalysis = async () => {
+        setAnalysisLoading(true);
+        try {
+          const data = await parentService.getStudentAnalysis(educandoSelecionado.id);
+          setStudentAnalysis(data);
+        } catch (error) {
+          setStudentAnalysis(null);
+        } finally {
+          setAnalysisLoading(false);
+        }
+      };
+      fetchAnalysis();
+    }
+  }, [educandoSelecionado]);
 
   const calcularMediaPorTrimestre = (educando: Educando) => {
     const trimestres = [1, 2, 3];
@@ -61,7 +90,7 @@ export function Desempenho() {
   };
 
   const obterDesempenhoEducando = (educandoId: string) => {
-    return desempenho.filter(d => d.educandoId === educandoId);
+    return desempenhos.filter(d => d.educandoId === educandoId);
   };
 
   const calcularMediaGeral = (educando: Educando) => {
@@ -69,6 +98,23 @@ export function Desempenho() {
     const soma = educando.notas.reduce((acc, nota) => acc + nota.valor, 0);
     return Math.round((soma / educando.notas.length) * 10) / 10;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!educandoSelecionado) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center flex-col text-muted-foreground">
+        <Target className="h-16 w-16 mb-4 opacity-50" />
+        <p>Nenhum educando encontrado.</p>
+      </div>
+    );
+  }
 
   const dadosRadar = calcularMediaPorDisciplina(educandoSelecionado).map(item => ({
     disciplina: item.disciplina.substring(0, 8),
@@ -275,7 +321,7 @@ export function Desempenho() {
                     <Progress value={(item.mediaGeral / 20) * 100} className="h-2" />
                   </div>
 
-                  {item.pontosFortes.length > 0 && (
+                  {item.pontosFortes && item.pontosFortes.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-green-700 mb-2 flex items-center">
                         <CheckCircle className="mr-1 h-4 w-4" />
@@ -292,7 +338,7 @@ export function Desempenho() {
                     </div>
                   )}
 
-                  {item.pontosFracos.length > 0 && (
+                  {item.pontosFracos && item.pontosFracos.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-red-700 mb-2 flex items-center">
                         <AlertCircle className="mr-1 h-4 w-4" />
@@ -309,7 +355,7 @@ export function Desempenho() {
                     </div>
                   )}
 
-                  {item.observacoes.length > 0 && (
+                  {item.observacoes && item.observacoes.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-blue-700 mb-2">Observações do Professor</h4>
                       <ul className="text-sm text-blue-600 space-y-1">
@@ -324,58 +370,83 @@ export function Desempenho() {
                   )}
                 </div>
               ))}
+              {desempenhoEducando.length === 0 && (
+                 <p className="text-sm text-muted-foreground">Sem dados suficientes para análise por disciplina.</p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recomendações */}
+      {/* Análise Global com IA */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <Target className="mr-2 h-5 w-5" />
-            Recomendações para Melhoria
+            <Bot className="mr-2 h-5 w-5 text-blue-600" />
+            Análise Global por Inteligência Artificial
           </CardTitle>
-          <CardDescription>Sugestões baseadas no desempenho atual</CardDescription>
+          <CardDescription>Resumo e recomendações geradas com base em todo o histórico escolar do seu educando</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="font-medium text-green-700">Continue Assim</h3>
-              <div className="space-y-2">
-                {calcularMediaPorDisciplina(educandoSelecionado)
-                  .filter(d => d.media >= 14)
-                  .map((disciplina, index) => (
-                    <div key={index} className="flex items-center p-3 bg-green-50 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-                      <div>
-                        <p className="font-medium text-green-800">{disciplina.disciplina}</p>
-                        <p className="text-sm text-green-600">Excelente desempenho - Média: {disciplina.media}</p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+          {analysisLoading ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+              <p className="text-muted-foreground text-sm">A analisar o desempenho escolar...</p>
             </div>
+          ) : studentAnalysis ? (
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 text-blue-900 rounded-lg">
+                <p className="text-sm leading-relaxed">{studentAnalysis.summary}</p>
+              </div>
 
-            <div className="space-y-4">
-              <h3 className="font-medium text-red-700">Precisa de Atenção</h3>
-              <div className="space-y-2">
-                {calcularMediaPorDisciplina(educandoSelecionado)
-                  .filter(d => d.media < 14)
-                  .map((disciplina, index) => (
-                    <div key={index} className="flex items-center p-3 bg-red-50 rounded-lg">
-                      <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-                      <div>
-                        <p className="font-medium text-red-800">{disciplina.disciplina}</p>
-                        <p className="text-sm text-red-600">
-                          {disciplina.media >= 10 ? 'Pode melhorar' : 'Requer atenção especial'} - Média: {disciplina.media}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="font-medium text-green-700 flex items-center">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Pontos Fortes
+                  </h3>
+                  <div className="space-y-2">
+                    {studentAnalysis.strengths?.map((strength: string, i: number) => (
+                       <p key={i} className="text-sm text-green-800 flex items-start">
+                         <span className="mr-2">•</span> {strength}
+                       </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium text-red-700 flex items-center">
+                    <AlertCircle className="mr-2 h-4 w-4" /> Áreas de Atenção
+                  </h3>
+                  <div className="space-y-2">
+                    {studentAnalysis.weaknesses?.map((weakness: string, i: number) => (
+                       <p key={i} className="text-sm text-red-800 flex items-start">
+                         <span className="mr-2">•</span> {weakness}
+                       </p>
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              {studentAnalysis.recommendations && studentAnalysis.recommendations.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-medium text-gray-800 mb-3 flex items-center">
+                    <Target className="mr-2 h-4 w-4 text-gray-600" /> Recomendações de Ação
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    {studentAnalysis.recommendations.map((rec: string, i: number) => (
+                      <li key={i} className="flex items-start">
+                        <span className="mr-2 font-bold text-blue-500">{i + 1}.</span> {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>A análise global por IA não está disponível neste momento.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

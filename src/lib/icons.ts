@@ -47,7 +47,17 @@ import {
     Building2,
     Hash,  
     Edit, 
-    Save
+    Save,
+    Shield,
+    Star,
+    Activity,
+    FileText,
+    Briefcase,
+    Baby,
+    ShieldCheck,
+    BadgeCheck,
+    School,
+    ArrowLeft
 } from 'lucide-react';
 
 export {
@@ -99,5 +109,15 @@ export {
     Building2,
     Hash,  
     Edit, 
-    Save
+    Save,
+    Shield,
+    Star,
+    Activity,
+    FileText,
+    Briefcase,
+    Baby,
+    ShieldCheck,
+    BadgeCheck,
+    School,
+    ArrowLeft
 }

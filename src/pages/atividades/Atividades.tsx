@@ -13,20 +13,27 @@ import {
   Trophy,
   BookOpen,
   Camera,
-  Download
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from '../../lib/icons';
-import { atividades, educandos } from '@/data/mockData';
+import { useParent } from '@/contexts/ParentContext';
 import { AtividadeEscolar } from '@/types';
+import { toast } from 'sonner';
 
 export function Atividades() {
+  const { atividades, educandos } = useParent();
   const [filtroTipo, setFiltroTipo] = useState<string>('todas');
-
-  const atividadesFiltradas = filtroTipo === 'todas' 
-    ? atividades 
-    : atividades.filter(a => a.tipo === filtroTipo);
+  const [dataCalendario, setDataCalendario] = useState(new Date());
 
   const proximasAtividades = atividades.filter(a => new Date(a.data) > new Date());
   const atividadesPassadas = atividades.filter(a => new Date(a.data) <= new Date());
+
+  const atividadesEsteMes = atividades.filter(a => {
+    const dataAtiv = new Date(a.data);
+    const hoje = new Date();
+    return dataAtiv.getMonth() === hoje.getMonth() && dataAtiv.getFullYear() === hoje.getFullYear();
+  });
 
   const verificarParticipacao = (atividade: AtividadeEscolar) => {
     return educandos.some(educando => 
@@ -39,6 +46,48 @@ export function Atividades() {
       atividade.turmasParticipantes.includes(educando.turma)
     );
   };
+
+  const handleDownloadICS = (atividade: AtividadeEscolar) => {
+    const startDate = new Date(atividade.data);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/-|:|\.\d+/g, '').substring(0, 15) + 'Z';
+    };
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      `DTSTART:${formatDate(startDate)}`,
+      `DTEND:${formatDate(endDate)}`,
+      `SUMMARY:${atividade.titulo}`,
+      `DESCRIPTION:${atividade.descricao}`,
+      atividade.local ? `LOCATION:${atividade.local}` : '',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].filter(Boolean).join('\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${atividade.titulo.replace(/\s+/g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Atividade adicionada à sua agenda!');
+  };
+
+  const diasNoMes = new Date(dataCalendario.getFullYear(), dataCalendario.getMonth() + 1, 0).getDate();
+  const primeiroDiaDoMes = new Date(dataCalendario.getFullYear(), dataCalendario.getMonth(), 1).getDay();
+
+  const handleMudarMes = (direcao: number) => {
+    setDataCalendario(prev => new Date(prev.getFullYear(), prev.getMonth() + direcao, 1));
+  };
+
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
   return (
     <div className="space-y-6">
@@ -85,8 +134,8 @@ export function Atividades() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{atividades.length}</div>
-            <p className="text-xs text-muted-foreground">Total de atividades</p>
+            <div className="text-2xl font-bold">{atividadesEsteMes.length}</div>
+            <p className="text-xs text-muted-foreground">Atividades este mês</p>
           </CardContent>
         </Card>
       </div>
@@ -188,12 +237,8 @@ export function Atividades() {
                         )}
 
                         <div className="flex space-x-2 pt-2">
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            Mais Detalhes
-                          </Button>
                           {temParticipacao && (
-                            <Button size="sm" className="flex-1">
+                            <Button size="sm" className="flex-1" onClick={() => handleDownloadICS(atividade)}>
                               <Calendar className="mr-2 h-4 w-4" />
                               Adicionar à Agenda
                             </Button>
@@ -209,9 +254,22 @@ export function Atividades() {
 
         <TabsContent value="calendario" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Calendário de Atividades</CardTitle>
-              <CardDescription>Visão mensal das atividades escolares</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Calendário de Atividades</CardTitle>
+                <CardDescription>Visão mensal das atividades escolares</CardDescription>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button variant="outline" size="icon" onClick={() => handleMudarMes(-1)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="font-medium min-w-[120px] text-center">
+                  {meses[dataCalendario.getMonth()]} de {dataCalendario.getFullYear()}
+                </span>
+                <Button variant="outline" size="icon" onClick={() => handleMudarMes(1)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-7 gap-2 mb-4">
@@ -223,25 +281,39 @@ export function Atividades() {
               </div>
               
               <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 35 }, (_, i) => {
-                  const dia = i - 6; // Ajuste para começar no domingo
-                  const data = new Date(2024, 2, dia); // Março 2024
-                  const atividadesDoDia = atividades.filter(a => 
-                    new Date(a.data).toDateString() === data.toDateString()
-                  );
+                {Array.from({ length: 42 }).map((_, i) => {
+                  const dia = i - primeiroDiaDoMes + 1;
+                  const isValidDay = dia > 0 && dia <= diasNoMes;
+                  
+                  if (i >= 35 && dia > diasNoMes) return null;
+                  
+                  let atividadesDoDia: AtividadeEscolar[] = [];
+                  if (isValidDay) {
+                    const dataAtualLoop = new Date(dataCalendario.getFullYear(), dataCalendario.getMonth(), dia);
+                    atividadesDoDia = atividades.filter(a => {
+                      const dataA = new Date(a.data);
+                      return dataA.getDate() === dataAtualLoop.getDate() && 
+                             dataA.getMonth() === dataAtualLoop.getMonth() && 
+                             dataA.getFullYear() === dataAtualLoop.getFullYear();
+                    });
+                  }
 
                   return (
                     <div key={i} className={`p-2 min-h-[80px] border rounded ${
-                      dia > 0 && dia <= 31 ? 'bg-white' : 'bg-gray-50'
+                      isValidDay ? 'bg-white' : 'bg-gray-50'
                     }`}>
-                      {dia > 0 && dia <= 31 && (
+                      {isValidDay && (
                         <>
-                          <div className="font-medium text-sm mb-1">{dia}</div>
+                          <div className={`font-medium text-sm mb-1 flex items-center justify-center ${
+                            dia === new Date().getDate() && dataCalendario.getMonth() === new Date().getMonth() && dataCalendario.getFullYear() === new Date().getFullYear() 
+                              ? 'bg-blue-600 text-white w-6 h-6 rounded-full' 
+                              : ''
+                          }`}>{dia}</div>
                           {atividadesDoDia.map(atividade => (
-                            <div key={atividade.id} className={`text-xs p-1 rounded mb-1 ${
+                            <div key={atividade.id} className={`text-xs p-1 rounded mb-1 truncate ${
                               atividade.tipo === 'escolar' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                            }`}>
-                              {atividade.titulo.substring(0, 15)}...
+                            }`} title={atividade.titulo}>
+                              {atividade.titulo}
                             </div>
                           ))}
                         </>
@@ -302,10 +374,10 @@ export function Atividades() {
                           </div>
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => toast.info('As fotos desta atividade ainda não foram disponibilizadas.')} title="Ver Fotos">
                             <Camera className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => toast.info('Não há documentos associados a esta atividade.')} title="Descarregar Documento">
                             <Download className="h-4 w-4" />
                           </Button>
                         </div>

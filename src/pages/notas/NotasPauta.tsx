@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,26 @@ import {
   Mail,
   Calendar
 } from '../../lib/icons';
-import { educandos, professores } from '@/data/mockData';
+import { useParent } from '@/contexts/ParentContext';
 import { Educando } from '@/types';
+import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export function NotasPauta() {
-  const [educandoSelecionado, setEducandoSelecionado] = useState<Educando>(educandos[0]);
+  const { educandos, isLoading } = useParent();
+  const [educandoSelecionado, setEducandoSelecionado] = useState<Educando | null>(null);
   const [trimestreSelecionado, setTrimestreSelecionado] = useState('1');
+  const [activeTab, setActiveTab] = useState('pauta');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (educandos.length > 0 && !educandoSelecionado) {
+      setEducandoSelecionado(educandos[0]);
+    }
+  }, [educandos, educandoSelecionado]);
 
   const calcularMedia = (educando: Educando, disciplina?: string, trimestre?: number) => {
     let notasFiltradas = educando.notas;
@@ -42,9 +56,9 @@ export function NotasPauta() {
   };
 
   const getStatusNota = (media: number) => {
-    if (media >= 14) return { status: 'Aprovado', color: 'default', icon: TrendingUp };
-    if (media >= 10) return { status: 'Recuperação', color: 'secondary', icon: Minus };
-    return { status: 'Reprovado', color: 'destructive', icon: TrendingDown };
+    if (media >= 14) return { status: 'Aprovado', color: 'default' as const, icon: TrendingUp };
+    if (media >= 10) return { status: 'Recuperação', color: 'secondary' as const, icon: Minus };
+    return { status: 'Reprovado', color: 'destructive' as const, icon: TrendingDown };
   };
 
   const obterNotasPorDisciplina = (educando: Educando) => {
@@ -57,6 +71,9 @@ export function NotasPauta() {
       const mediaT2 = calcularMedia(educando, disciplina, 2);
       const mediaT3 = calcularMedia(educando, disciplina, 3);
       
+      // Obter o nome do professor a partir da primeira nota dessa disciplina
+      const professor = notasDisciplina.length > 0 ? notasDisciplina[0].professorNome : 'Não atribuído';
+      
       return {
         disciplina,
         notas: notasDisciplina,
@@ -64,10 +81,123 @@ export function NotasPauta() {
         mediaT1,
         mediaT2,
         mediaT3,
-        professor: professores.find(p => p.disciplinas.includes(disciplina))
+        professor
       };
     });
   };
+
+  const exportarBoletim = () => {
+    toast.success("A gerar boletim...");
+    
+    const disciplinas = obterNotasPorDisciplina(educandoSelecionado!);
+    const isGeral = trimestreSelecionado === 'geral';
+
+    const doc = new jsPDF();
+    const titulo = isGeral ? 'Pauta Geral (Final)' : `${trimestreSelecionado}º Trimestre`;
+
+    // Cabeçalho da Escola
+    doc.setFontSize(22);
+    doc.setTextColor(37, 99, 235);
+    doc.text('Boletim de Avaliação Contínua', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Ano Letivo: ${new Date().getFullYear()}`, 14, 30);
+    doc.text(`Período: ${titulo}`, 14, 36);
+
+    // Informações do Aluno
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 45, 182, 25, 3, 3, 'FD');
+
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text('Aluno:', 18, 53);
+    doc.text('Série:', 18, 63);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(educandoSelecionado!.nome, 35, 53);
+    doc.text(educandoSelecionado!.serie, 35, 63);
+
+    doc.setFont("helvetica", "bold");
+    doc.text('Turma:', 120, 53);
+    doc.text('Data de Emissão:', 120, 63);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(educandoSelecionado!.turma, 160, 53);
+    doc.text(new Date().toLocaleDateString('pt-BR'), 160, 63);
+
+    // Tabela de Notas
+    const tableColumn = !isGeral 
+      ? ["Disciplina", "Professor", "Nota Trimestre", "Status"]
+      : ["Disciplina", "Professor", "1º Trim", "2º Trim", "3º Trim", "Média Final", "Status"];
+
+    const tableRows: any[] = [];
+
+    disciplinas.forEach(d => {
+      const notaMedia = isGeral ? d.mediaGeral : (trimestreSelecionado === '1' ? d.mediaT1 : trimestreSelecionado === '2' ? d.mediaT2 : d.mediaT3);
+      const statusInfo = getStatusNota(notaMedia);
+      const statusText = notaMedia ? statusInfo.status : '-';
+      
+      const rowData = !isGeral 
+        ? [d.disciplina, d.professor, notaMedia || '-', statusText]
+        : [d.disciplina, d.professor, d.mediaT1 || '-', d.mediaT2 || '-', d.mediaT3 || '-', d.mediaGeral, statusText];
+        
+      tableRows.push(rowData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 80,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold' },
+      columnStyles: {
+        0: { fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.column.index === tableColumn.length - 1) {
+          const status = data.cell.raw as string;
+          if (status === 'Aprovado') data.cell.styles.textColor = [22, 163, 74];
+          else if (status === 'Recuperação') data.cell.styles.textColor = [202, 138, 4];
+          else if (status === 'Reprovado') data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
+    // Assinatura
+    const finalY = (doc as any).lastAutoTable.finalY || 150;
+    
+    doc.setDrawColor(100);
+    doc.line(14, finalY + 40, 90, finalY + 40);
+    doc.setFontSize(9);
+    doc.text('Assinatura do Encarregado', 14, finalY + 48);
+
+    doc.setTextColor(150);
+    doc.text('Documento gerado automaticamente pelo portal da escola.', 14, finalY + 70);
+
+    doc.save(`Boletim_${educandoSelecionado!.nome.replace(/\\s+/g, '_')}_${titulo.replace(/\\s+/g, '_')}.pdf`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!educandoSelecionado) {
+    return (
+      <div className="flex h-[400px] w-full items-center justify-center flex-col text-muted-foreground">
+        <GraduationCap className="h-16 w-16 mb-4 opacity-50" />
+        <p>Nenhum educando encontrado.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,7 +211,7 @@ export function NotasPauta() {
           <p className="text-muted-foreground">Acompanhe o desempenho acadêmico dos seus educandos</p>
         </div>
         
-        <Button variant="outline">
+        <Button variant="outline" onClick={exportarBoletim}>
           <Download className="mr-2 h-4 w-4" />
           Exportar Boletim
         </Button>
@@ -130,7 +260,7 @@ export function NotasPauta() {
         </div>
       </div>
 
-      <Tabs defaultValue="pauta" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="pauta">Pauta Geral</TabsTrigger>
           <TabsTrigger value="disciplinas">Por Disciplina</TabsTrigger>
@@ -195,16 +325,13 @@ export function NotasPauta() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
-                              {disciplinaData.professor?.avatar && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={disciplinaData.professor.avatar} />
-                                  <AvatarFallback className="text-xs">
-                                    {disciplinaData.professor.nome.split(' ').map(n => n[0]).join('')}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                                  {disciplinaData.professor.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
                               <span className="text-sm">
-                                {disciplinaData.professor?.nome || 'N/A'}
+                                {disciplinaData.professor}
                               </span>
                             </div>
                           </TableCell>
@@ -229,17 +356,17 @@ export function NotasPauta() {
                             </span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge variant={statusInfo.color  as unknown} className="flex items-center w-fit mx-auto bg-green-500">
+                            <Badge variant={statusInfo.color} className="flex items-center w-fit mx-auto bg-green-500">
                               <StatusIcon className="mr-1 h-3 w-3" />
                               {statusInfo.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex justify-center space-x-1">
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => setActiveTab('disciplinas')}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => navigate('/chat')}>
                                 <Mail className="h-4 w-4" />
                               </Button>
                             </div>
@@ -265,13 +392,13 @@ export function NotasPauta() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">{disciplinaData.disciplina}</CardTitle>
-                      <Badge variant={statusInfo.color as unknown} className="flex items-center">
+                      <Badge variant={statusInfo.color} className="flex items-center">
                         <StatusIcon className="mr-1 h-3 w-3" />
                         {statusInfo.status}
                       </Badge>
                     </div>
                     <CardDescription>
-                      Professor: {disciplinaData.professor?.nome || 'N/A'}
+                      Professor: {disciplinaData.professor || 'N/A'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -286,27 +413,34 @@ export function NotasPauta() {
                         {disciplinaData.notas
                           .filter(nota => trimestreSelecionado === 'geral' || nota.trimestre === parseInt(trimestreSelecionado))
                           .map((nota) => (
-                            <div key={nota.id} className="flex justify-between items-center p-3 border rounded-lg">
-                              <div>
-                                <div className="font-medium capitalize">{nota.tipo}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {new Date(nota.data).toLocaleDateString('pt-BR')} • {nota.trimestre}º Trimestre
+                            <div key={nota.id} className="flex flex-col p-3 border rounded-lg gap-2">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium capitalize">{nota.tipo}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {new Date(nota.data).toLocaleDateString('pt-BR')} • {nota.trimestre}º Trimestre
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xl font-bold">{nota.valor}</div>
+                                  <div className="text-sm text-muted-foreground">/ 20</div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-xl font-bold">{nota.valor}</div>
-                                <div className="text-sm text-muted-foreground">/ 20</div>
-                              </div>
+                              {nota.observacaoProfessor && (
+                                <div className="text-sm text-blue-700 bg-blue-50 p-2 rounded-md border border-blue-100">
+                                  <strong>Obs:</strong> {nota.observacaoProfessor}
+                                </div>
+                              )}
                             </div>
                           ))}
                       </div>
 
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => setActiveTab('historico')}>
                           <Eye className="mr-2 h-4 w-4" />
-                          Detalhes
+                          Histórico
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/chat')}>
                           <Mail className="mr-2 h-4 w-4" />
                           Contactar Prof.
                         </Button>

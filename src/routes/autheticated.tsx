@@ -1,15 +1,13 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-//import { useAuthToken } from "../services/auth/set-cookie";
-
+import { useAuthStore } from "@/store/authStore";
 
 type PrivateRouteProps = {
   children: React.ReactElement;
 };
 
 export function AuthenticatedRoute({ children }: PrivateRouteProps) {
-  //const { getToken } = useAuthToken(); 
-  const  getToken  = true; 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  return  getToken ? children :<Navigate to="/"/>;
+  return isAuthenticated ? children : <Navigate to="/" />;
 }

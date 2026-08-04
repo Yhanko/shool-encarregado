@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,15 +14,19 @@ import {
   Users,
   Eye,
   Check,
-  X,
-  Filter
+  Filter,
+  MessageCircle,
+  AlertTriangle
 } from '../../lib/icons';
-import { notificacoes, educandos } from '@/data/mockData';
+import { useParent } from '@/contexts/ParentContext';
 import { Notificacao } from '@/types';
+import { toast } from 'sonner';
 
 export function Notificacoes() {
+  const { notificacoes, educandos, markAsRead, markAllAsRead } = useParent();
   const [notificacaoSelecionada, setNotificacaoSelecionada] = useState<Notificacao | null>(null);
   const [filtroTipo, setFiltroTipo] = useState<string>('todas');
+  const navigate = useNavigate();
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
@@ -29,6 +34,8 @@ export function Notificacoes() {
       case 'atividade': return Calendar;
       case 'nota': return GraduationCap;
       case 'reuniao': return Users;
+      case 'mensagem': return MessageCircle;
+      case 'falta': return AlertTriangle;
       default: return Bell;
     }
   };
@@ -39,6 +46,8 @@ export function Notificacoes() {
       case 'atividade': return 'bg-blue-100 text-blue-600';
       case 'nota': return 'bg-green-100 text-green-600';
       case 'reuniao': return 'bg-purple-100 text-purple-600';
+      case 'mensagem': return 'bg-cyan-100 text-cyan-600';
+      case 'falta': return 'bg-orange-100 text-orange-600';
       default: return 'bg-gray-100 text-gray-600';
     }
   };
@@ -49,16 +58,23 @@ export function Notificacoes() {
       case 'atividade': return 'Atividade';
       case 'nota': return 'Nota';
       case 'reuniao': return 'Reunião';
+      case 'mensagem': return 'Mensagem';
+      case 'falta': return 'Falta';
       default: return 'Geral';
     }
   };
 
-  const notificacoesFiltradas = filtroTipo === 'todas' 
-    ? notificacoes 
+  const notificacoesFiltradas = filtroTipo === 'todas'
+    ? notificacoes
     : notificacoes.filter(n => n.tipo === filtroTipo);
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
   const importantes = notificacoes.filter(n => n.importante).length;
+  const notificacoesEsteMes = notificacoes.filter(n => {
+    const d = new Date(n.data);
+    const h = new Date();
+    return d.getMonth() === h.getMonth() && d.getFullYear() === h.getFullYear();
+  });
 
   return (
     <div className="space-y-6">
@@ -72,13 +88,16 @@ export function Notificacoes() {
             Mantenha-se informado sobre a vida escolar dos seus educandos
           </p>
         </div>
-        
+
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={async () => {
+            await markAllAsRead();
+            toast.success('Todas as notificações marcadas como lidas');
+          }}>
             <Eye className="mr-2 h-4 w-4" />
             Marcar todas como lidas
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => toast.info('Funcionalidade de filtros avançados em desenvolvimento.')}>
             <Filter className="mr-2 h-4 w-4" />
             Filtros
           </Button>
@@ -115,7 +134,7 @@ export function Notificacoes() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{notificacoes.length}</div>
+            <div className="text-2xl font-bold">{notificacoesEsteMes.length}</div>
             <p className="text-xs text-muted-foreground">Este mês</p>
           </CardContent>
         </Card>
@@ -135,6 +154,12 @@ export function Notificacoes() {
           <TabsTrigger value="nota" onClick={() => setFiltroTipo('nota')}>
             Notas
           </TabsTrigger>
+          <TabsTrigger value="mensagem" onClick={() => setFiltroTipo('mensagem')}>
+            Mensagens
+          </TabsTrigger>
+          <TabsTrigger value="falta" onClick={() => setFiltroTipo('falta')}>
+            Faltas
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="todas" className="space-y-4">
@@ -151,22 +176,20 @@ export function Notificacoes() {
                     {notificacoesFiltradas.map((notificacao) => {
                       const Icon = getTipoIcon(notificacao.tipo);
                       const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                      
+
                       return (
                         <div
                           key={notificacao.id}
-                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                            !notificacao.lida ? 'border-blue-200 bg-blue-50' : 'hover:bg-muted/50'
-                          } ${
-                            notificacaoSelecionada?.id === notificacao.id ? 'ring-2 ring-blue-500' : ''
-                          }`}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${!notificacao.lida ? 'border-blue-200 bg-blue-50' : 'hover:bg-muted/50'
+                            } ${notificacaoSelecionada?.id === notificacao.id ? 'ring-2 ring-blue-500' : ''
+                            }`}
                           onClick={() => setNotificacaoSelecionada(notificacao)}
                         >
                           <div className="flex items-start space-x-3">
                             <div className={`p-2 rounded-full ${getTipoColor(notificacao.tipo)}`}>
                               <Icon className="h-4 w-4" />
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <h3 className={`font-medium ${!notificacao.lida ? 'text-blue-900' : ''}`}>
@@ -183,11 +206,11 @@ export function Notificacoes() {
                                   )}
                                 </div>
                               </div>
-                              
+
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {notificacao.conteudo}
                               </p>
-                              
+
                               <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center space-x-2">
                                   <Badge variant="outline" className="text-xs">
@@ -281,7 +304,7 @@ export function Notificacoes() {
                         <p className="text-sm text-red-700 mb-3">
                           Este pagamento requer sua atenção imediata.
                         </p>
-                        <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                        <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => navigate('/pagamentos')}>
                           <DollarSign className="mr-2 h-4 w-4" />
                           Ver Pagamentos
                         </Button>
@@ -290,15 +313,15 @@ export function Notificacoes() {
 
                     <div className="flex space-x-2 pt-4">
                       {!notificacaoSelecionada.lida && (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={async () => {
+                          await markAsRead(notificacaoSelecionada.id);
+                          setNotificacaoSelecionada({ ...notificacaoSelecionada, lida: true });
+                          toast.success('Notificação marcada como lida');
+                        }}>
                           <Check className="mr-2 h-4 w-4" />
                           Marcar como Lida
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
-                        <X className="mr-2 h-4 w-4" />
-                        Remover
-                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -329,7 +352,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'pagamento')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg bg-red-50">
                         <h3 className="font-medium">{notificacao.titulo}</h3>
@@ -343,7 +366,7 @@ export function Notificacoes() {
                         )}
                         <div className="flex items-center justify-between mt-3">
                           <Badge variant="outline">Pagamento</Badge>
-                          <Button size="sm">Ver Detalhes</Button>
+                          <Button size="sm" onClick={() => navigate('/pagamentos')}>Ver Detalhes</Button>
                         </div>
                       </div>
                     );
@@ -367,7 +390,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'atividade')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg">
                         <h3 className="font-medium">{notificacao.titulo}</h3>
@@ -381,7 +404,7 @@ export function Notificacoes() {
                         )}
                         <div className="flex items-center justify-between mt-3">
                           <Badge variant="outline">Atividade</Badge>
-                          <Button size="sm">Ver Detalhes</Button>
+                          <Button size="sm" onClick={() => navigate('/atividades')}>Ver Detalhes</Button>
                         </div>
                       </div>
                     );
@@ -405,7 +428,7 @@ export function Notificacoes() {
                   .filter(n => n.tipo === 'nota')
                   .map((notificacao) => {
                     const educando = notificacao.educandoId ? educandos.find(e => e.id === notificacao.educandoId) : null;
-                    
+
                     return (
                       <div key={notificacao.id} className="p-4 border rounded-lg bg-green-50">
                         <h3 className="font-medium">{notificacao.titulo}</h3>
@@ -419,7 +442,7 @@ export function Notificacoes() {
                         )}
                         <div className="flex items-center justify-between mt-3">
                           <Badge variant="outline">Nota</Badge>
-                          <Button size="sm">Ver Notas</Button>
+                          <Button size="sm" onClick={() => navigate('/notas')}>Ver Notas</Button>
                         </div>
                       </div>
                     );

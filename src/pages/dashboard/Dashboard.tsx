@@ -27,27 +27,11 @@ import {
   Clock,
   DollarSign
 } from '../../lib/icons';
-import { educandos, pagamentos, notificacoes, atividades } from '@/data/mockData';
-
-const notasData = [
-  { trimestre: '1º Trim', joao: 15.0, maria: 18.0 },
-  { trimestre: '2º Trim', joao: 0, maria: 0 },
-  { trimestre: '3º Trim', joao: 0, maria: 0 }
-];
-
-const pagamentosData = [
-  { mes: 'Jan', valor: 45000, status: 'pago' },
-  { mes: 'Fev', valor: 45000, status: 'pago' },
-  { mes: 'Mar', valor: 45000, status: 'pendente' }
-];
-
-const statusPagamentos = [
-  { name: 'Pagos', value: 4, color: '#10b981' },
-  { name: 'Pendentes', value: 1, color: '#f59e0b' },
-  { name: 'Atrasados', value: 1, color: '#ef4444' }
-];
+import { useParent } from '@/contexts/ParentContext';
 
 export function Dashboard() {
+  const { educandos, pagamentos, notificacoes, atividades } = useParent();
+
   const totalEducandos = educandos.length;
   const pagamentosPendentes = pagamentos.filter(p => p.status === 'pendente').length;
   const pagamentosAtrasados = pagamentos.filter(p => p.status === 'atrasado').length;
@@ -61,6 +45,22 @@ export function Dashboard() {
     const soma = educando.notas.reduce((acc, nota) => acc + nota.valor, 0);
     return Math.round((soma / educando.notas.length) * 10) / 10;
   };
+
+  // Process data for charts
+  const statusPagamentos = [
+    { name: 'Pagos', value: pagamentos.filter(p => p.status === 'pago').length, color: '#10b981' },
+    { name: 'Pendentes', value: pagamentosPendentes, color: '#f59e0b' },
+    { name: 'Atrasados', value: pagamentosAtrasados, color: '#ef4444' }
+  ].filter(s => s.value > 0);
+  
+  if (statusPagamentos.length === 0) {
+     statusPagamentos.push({ name: 'Sem Registos', value: 1, color: '#d1d5db' });
+  }
+
+  // Simplified mockup for charts since backend only gives a flat list of payments
+  const pagamentosData = pagamentos.slice(-5).map(p => ({ mes: p.mes, valor: p.valor, status: p.status }));
+  const notasData = [{ trimestre: 'Geral', ...Object.fromEntries(educandos.map(e => [e.nome.split(' ')[0], calcularMediaEducando(e.id)])) }];
+
 
   return (
     <div className="space-y-6">
@@ -236,8 +236,19 @@ export function Dashboard() {
                 <XAxis dataKey="trimestre" />
                 <YAxis domain={[0, 20]} />
                 <Tooltip />
-                <Bar dataKey="joao" fill="#3b82f6" name="João" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="maria" fill="#10b981" name="Maria" radius={[4, 4, 0, 0]} />
+                {educandos.map((educando, index) => {
+                  const firstName = educando.nome.split(' ')[0];
+                  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+                  return (
+                    <Bar 
+                      key={educando.id} 
+                      dataKey={firstName} 
+                      fill={colors[index % colors.length]} 
+                      name={firstName} 
+                      radius={[4, 4, 0, 0]} 
+                    />
+                  );
+                })}
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

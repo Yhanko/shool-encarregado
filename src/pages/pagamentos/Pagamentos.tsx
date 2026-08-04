@@ -18,16 +18,18 @@ import {
   Smartphone,
   Building2
 } from '../../lib/icons';
-import { pagamentos, educandos } from '@/data/mockData';
+import { useParent } from '@/contexts/ParentContext';
 import { Pagamento } from '@/types';
 
 export function Pagamentos() {
+  const { pagamentos, educandos } = useParent();
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroEducando, setFiltroEducando] = useState<string>('todos');
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pago': return CheckCircle;
+      case 'processamento': return Clock;
       case 'pendente': return Clock;
       case 'atrasado': return AlertTriangle;
       default: return Clock;
@@ -37,7 +39,8 @@ export function Pagamentos() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pago': return 'success';
-      case 'pendente': return 'default';
+      case 'processamento': return 'default';
+      case 'pendente': return 'secondary';
       case 'atrasado': return 'destructive';
       default: return 'secondary';
     }
@@ -216,7 +219,7 @@ export function Pagamentos() {
                           <TableCell>
                             <Badge variant={getStatusColor(pagamento.status)} className="flex items-center w-fit">
                               <StatusIcon className="mr-1 h-3 w-3" />
-                              {pagamento.status}
+                              <span className="capitalize">{pagamento.status === 'processamento' ? 'Em Análise' : pagamento.status}</span>
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -280,7 +283,7 @@ export function Pagamentos() {
                             <CardTitle className="text-lg">{getTipoLabel(pagamento.tipo)}</CardTitle>
                             <Badge variant={getStatusColor(pagamento.status)}>
                               <StatusIcon className="mr-1 h-3 w-3" />
-                              {pagamento.status}
+                              <span className="capitalize">{pagamento.status === 'processamento' ? 'Em Análise' : pagamento.status}</span>
                             </Badge>
                           </div>
                           <CardDescription>{educando?.nome} - {educando?.turma}</CardDescription>
@@ -384,9 +387,36 @@ export function Pagamentos() {
   );
 }
 
-function FormularioPagamento({ pagamento }: { pagamento: Pagamento }) {
+function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, onSuccess?: () => void }) {
+  const { educandos, submitPaymentProof, instituicao } = useParent();
   const [metodoPagamento, setMetodoPagamento] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const educando = educandos.find(e => e.id === pagamento.educandoId);
+
+  const handleSubmit = async () => {
+    if (!metodoPagamento) return;
+    
+    // For 'dinheiro', we might not require a file. Let's assume we don't.
+    // But for 'transferencia' and 'multicaixa', we do need one (or at least it's recommended).
+    
+    setIsSubmitting(true);
+    try {
+      let proofUrl = '';
+      if (file) {
+         const { parentService } = await import('@/services/api/parentService');
+         const uploadResult = await parentService.uploadPaymentProof(file);
+         proofUrl = uploadResult?.url || uploadResult?.path || uploadResult;
+      }
+      
+      await submitPaymentProof(pagamento.id, proofUrl, metodoPagamento);
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error("Erro ao processar pagamento:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -447,30 +477,52 @@ function FormularioPagamento({ pagamento }: { pagamento: Pagamento }) {
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-800 mb-2">Pagamento via Multicaixa</h4>
           <p className="text-sm text-blue-700 mb-3">
-            Use o código abaixo no seu Multicaixa Express:
+            Use o código abaixo no seu Multicaixa Express e anexe o comprovativo.
           </p>
-          <div className="bg-white p-3 rounded border text-center">
-            <span className="font-mono text-lg font-bold">MC-{pagamento.id.toUpperCase()}</span>
+          <div className="bg-white p-3 rounded border text-center mb-3">
+            <span className="font-mono text-lg font-bold">MC-{pagamento.id.toUpperCase().substring(0, 8)}</span>
           </div>
+          <Label htmlFor="comprovativo-mc">Anexar Comprovativo</Label>
+          <input 
+            id="comprovativo-mc" 
+            type="file" 
+            className="w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
         </div>
       )}
 
       {metodoPagamento === 'transferencia' && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <h4 className="font-medium text-green-800 mb-2">Dados para Transferência</h4>
-          <div className="space-y-2 text-sm">
-            <div><strong>Banco:</strong> BAI</div>
-            <div><strong>IBAN:</strong> AO06 0040 0000 1234 5678 1011 2</div>
-            <div><strong>Titular:</strong> Escola Internacional de Luanda</div>
-            <div><strong>Referência:</strong> {pagamento.id.toUpperCase()}</div>
+          <div className="space-y-2 text-sm mb-3">
+            <div><strong>Banco:</strong> {instituicao?.bankName || 'BAI'}</div>
+            <div><strong>IBAN:</strong> {instituicao?.iban || 'AO06 0040 0000 1234 5678 1011 2'}</div>
+            <div><strong>Titular:</strong> {instituicao?.name || instituicao?.accountHolder || 'Escola Internacional de Luanda'}</div>
+            <div><strong>Referência:</strong> {pagamento.id.toUpperCase().substring(0, 8)}</div>
           </div>
+          <Label htmlFor="comprovativo-tr">Anexar Comprovativo</Label>
+          <input 
+            id="comprovativo-tr" 
+            type="file" 
+            className="w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
         </div>
       )}
 
       <div className="flex space-x-2 pt-4">
-        <Button className="flex-1 bg-green-600 hover:bg-green-500" disabled={!metodoPagamento}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          Confirmar Pagamento
+        <Button 
+          className="flex-1 bg-green-600 hover:bg-green-500" 
+          disabled={!metodoPagamento || isSubmitting || (metodoPagamento !== 'dinheiro' && !file)}
+          onClick={handleSubmit}
+        >
+          {isSubmitting ? 'Processando...' : (
+             <>
+               <CreditCard className="mr-2 h-4 w-4" />
+               Confirmar Pagamento
+             </>
+          )}
         </Button>
       </div>
     </div>
