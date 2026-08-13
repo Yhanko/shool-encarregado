@@ -9,10 +9,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Bell, User, LogOut, Settings } from '../lib/icons';
+import { Menu, Bell, User, LogOut, Settings } from '../lib/icons';
 import { useAuthStore } from '@/store/authStore';
 import { useParent } from '@/contexts/ParentContext';
-export function Header() {
+
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user } = useAuthStore();
   const { notificacoes } = useParent();
 
@@ -21,20 +26,27 @@ export function Header() {
   const nomeAbreviado = user?.name ? user.name.split(' ')[0] : 'Usuário';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 w-full">
+    <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 w-full">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Bem-vindo, {nomeAbreviado}!
-          </h2>
-          <p className="text-sm text-gray-600">
-            {new Date().toLocaleDateString('pt-BR', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </p>
+        <div className="flex items-center gap-4">
+          {onMenuClick && (
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+              <Menu className="h-6 w-6" />
+            </Button>
+          )}
+          <div>
+            <h2 className="text-xl lg:text-2xl font-semibold text-gray-900">
+              Bem-vindo, {nomeAbreviado}!
+            </h2>
+            <p className="text-sm text-gray-600">
+              {new Date().toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">

@@ -528,13 +528,15 @@ export function ProfileView() {
                               onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                               className="pr-10"
                             />
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
-                              {showPasswords.current ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
+                              {showPasswords.current ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
+                            </Button>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -547,13 +549,15 @@ export function ProfileView() {
                               onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                               className="pr-10"
                             />
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
-                              {showPasswords.new ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
+                              {showPasswords.new ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
+                            </Button>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -566,13 +570,15 @@ export function ProfileView() {
                               onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                               className="pr-10"
                             />
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
-                              {showPasswords.confirm ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
+                              {showPasswords.confirm ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
+                            </Button>
                           </div>
                         </div>
                         <div className="flex gap-3">

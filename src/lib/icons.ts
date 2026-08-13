@@ -1,4 +1,5 @@
 import { 
+    Menu,
     Bell, 
     User, 
     LogOut, 
@@ -61,6 +62,7 @@ import {
 } from 'lucide-react';
 
 export {
+    Menu,
     Bell, 
     User, 
     LogOut, 

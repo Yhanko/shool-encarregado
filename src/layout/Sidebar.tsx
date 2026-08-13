@@ -56,7 +56,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <div className={cn(
-      "flex flex-col bg-white border-r border-gray-200 transition-all duration-300",
+      "flex flex-col h-full bg-white border-r border-gray-200 transition-all duration-300",
       collapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-between p-4 border-b">
@@ -72,7 +72,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 p-0 bg-blue-600 text-white hover:bg-blue-500 hover:text-white"
+          className="hidden lg:flex h-8 w-8 p-0 bg-blue-600 text-white hover:bg-blue-500 hover:text-white"
         >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </Button>
