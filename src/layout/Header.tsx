@@ -30,7 +30,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {onMenuClick && (
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
+            <Button variant="outline" size="icon" className="lg:hidden bg-white text-black border-gray-200 hover:bg-gray-50 hover:text-black" onClick={onMenuClick}>
               <Menu className="h-6 w-6" />
             </Button>
           )}
