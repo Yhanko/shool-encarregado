@@ -90,7 +90,7 @@ export function Notificacoes() {
         </div>
 
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={async () => {
+          <Button size="sm" onClick={async () => {
             await markAllAsRead();
             toast.success('Todas as notificações marcadas como lidas');
           }}>
@@ -304,7 +304,7 @@ export function Notificacoes() {
                         <p className="text-sm text-red-700 mb-3">
                           Este pagamento requer sua atenção imediata.
                         </p>
-                        <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => navigate('/pagamentos')}>
+                        <Button size="sm" onClick={() => navigate('/pagamentos')}>
                           <DollarSign className="mr-2 h-4 w-4" />
                           Ver Pagamentos
                         </Button>

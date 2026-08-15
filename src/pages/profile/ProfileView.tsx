@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,22 @@ import { useParent } from '@/contexts/ParentContext';
 import { useAuthStore } from '@/store/authStore';
 import { parentService } from '@/services/api/parentService';
 import { toast } from 'sonner';
+import { z } from "zod";
+import { cn } from "@/lib/utils";
+
+const updateProfileSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  email: z.string().email("Email inválido")
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Preencha a palavra-passe atual"),
+  newPassword: z.string().min(6, "A nova palavra-passe deve ter pelo menos 6 caracteres"),
+  confirmPassword: z.string()
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "As palavras-passe não coincidem",
+  path: ["confirmPassword"]
+});
 
 export function ProfileView() {
   const { user, setUser } = useAuthStore();
@@ -33,6 +49,17 @@ export function ProfileView() {
   const [isChangingPwd, setIsChangingPwd] = useState(false);
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [saveError, setSaveError] = useState('');
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+  const [pwdErrors, setPwdErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (user) {
+      setEditedData({
+        name: user.name || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
 
   // Derived stats from real data
   const totalPagamentosDevidos = pagamentos.filter(p => p.status === 'atrasado').length;
@@ -53,6 +80,17 @@ export function ProfileView() {
     .toUpperCase();
 
   const handleSaveProfile = async () => {
+    setProfileErrors({});
+    const result = updateProfileSchema.safeParse(editedData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+      });
+      setProfileErrors(fieldErrors);
+      return;
+    }
+
     setIsSaving(true);
     setSaveError('');
     try {
@@ -69,14 +107,17 @@ export function ProfileView() {
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('As palavras-passe não coincidem');
+    setPwdErrors({});
+    const result = changePasswordSchema.safeParse(passwordData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+      });
+      setPwdErrors(fieldErrors);
       return;
     }
-    if (passwordData.newPassword.length < 6) {
-      toast.error('A nova palavra-passe deve ter pelo menos 6 caracteres');
-      return;
-    }
+
     setIsChangingPwd(true);
     try {
       await parentService.changePassword(passwordData.currentPassword, passwordData.newPassword);
@@ -282,11 +323,15 @@ export function ProfileView() {
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Nome Completo</Label>
                   {isEditing ? (
-                    <Input
-                      id="fullName"
-                      value={editedData.name}
-                      onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
-                    />
+                    <div>
+                      <Input
+                        value={editedData.name}
+                        onChange={(e) => {setEditedData({ ...editedData, name: e.target.value }); setProfileErrors(p => ({...p, name: ''}))}}
+                        className={cn("mt-1", profileErrors.name ? "border-destructive focus-visible:ring-destructive" : "")}
+                        disabled={!isEditing}
+                      />
+                      {profileErrors.name && <p className="text-xs text-destructive mt-1">{profileErrors.name}</p>}
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <User className="w-4 h-4 text-gray-400" />
@@ -297,12 +342,16 @@ export function ProfileView() {
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   {isEditing ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={editedData.email}
-                      onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
-                    />
+                    <div>
+                      <Input
+                        type="email"
+                        value={editedData.email}
+                        onChange={(e) => {setEditedData({ ...editedData, email: e.target.value }); setProfileErrors(p => ({...p, email: ''}))}}
+                        className={cn("mt-1", profileErrors.email ? "border-destructive focus-visible:ring-destructive" : "")}
+                        disabled={!isEditing}
+                      />
+                      {profileErrors.email && <p className="text-xs text-destructive mt-1">{profileErrors.email}</p>}
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <Mail className="w-4 h-4 text-gray-400" />
@@ -522,64 +571,58 @@ export function ProfileView() {
                           <Label htmlFor="currentPassword">Palavra-passe Atual</Label>
                           <div className="relative">
                             <Input
-                              id="currentPassword"
                               type={showPasswords.current ? "text" : "password"}
                               value={passwordData.currentPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                              className="pr-10"
+                              onChange={(e) => {setPasswordData({ ...passwordData, currentPassword: e.target.value }); setPwdErrors(p => ({...p, currentPassword: ''}))}}
+                              className={cn("pr-10", pwdErrors.currentPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer"
                             >
-                              {showPasswords.current ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
-                            </Button>
+                              {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                           </div>
+                          {pwdErrors.currentPassword && <p className="text-xs text-destructive mt-1">{pwdErrors.currentPassword}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="newPassword">Nova Palavra-passe</Label>
                           <div className="relative">
                             <Input
-                              id="newPassword"
                               type={showPasswords.new ? "text" : "password"}
                               value={passwordData.newPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                              className="pr-10"
+                              onChange={(e) => {setPasswordData({ ...passwordData, newPassword: e.target.value }); setPwdErrors(p => ({...p, newPassword: ''}))}}
+                              className={cn("pr-10", pwdErrors.newPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer"
                             >
-                              {showPasswords.new ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
-                            </Button>
+                              {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                           </div>
+                          {pwdErrors.newPassword && <p className="text-xs text-destructive mt-1">{pwdErrors.newPassword}</p>}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="confirmPassword">Confirmar Nova Palavra-passe</Label>
                           <div className="relative">
                             <Input
-                              id="confirmPassword"
                               type={showPasswords.confirm ? "text" : "password"}
                               value={passwordData.confirmPassword}
-                              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                              className="pr-10"
+                              onChange={(e) => {setPasswordData({ ...passwordData, confirmPassword: e.target.value }); setPwdErrors(p => ({...p, confirmPassword: ''}))}}
+                              className={cn("pr-10", pwdErrors.confirmPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                              onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer"
                             >
-                              {showPasswords.confirm ? <EyeOff className="w-4 h-4 stroke-[2.5]" /> : <Eye className="w-4 h-4 stroke-[2.5]" />}
-                            </Button>
+                              {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
                           </div>
+                          {pwdErrors.confirmPassword && <p className="text-xs text-destructive mt-1">{pwdErrors.confirmPassword}</p>}
                         </div>
                         <div className="flex gap-3">
                           <Button onClick={handleChangePassword} className="flex-1" disabled={isChangingPwd}>

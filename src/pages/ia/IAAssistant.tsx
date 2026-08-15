@@ -198,7 +198,7 @@ export function IAAssistant() {
                 <Button 
                   onClick={enviarPergunta} 
                   disabled={loading || !pergunta.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full text-white"
                 >
                   {loading ? (
                     <>

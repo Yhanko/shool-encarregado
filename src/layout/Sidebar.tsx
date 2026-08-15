@@ -56,15 +56,15 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-white border-r border-gray-200 transition-all duration-300",
+      "flex flex-col h-full bg-background border-r border-border transition-all duration-300",
       collapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-between p-4 border-b">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-blue-600" />
+            <GraduationCap className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-xs text-gray-500">Portal do Encarregado</p>
+              <p className="text-xs text-muted-foreground font-medium">Portal do Encarregado</p>
             </div>
           </div>
         )}
@@ -72,7 +72,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex h-8 w-8 p-0 bg-blue-600 text-white hover:bg-blue-500 hover:text-white"
+          className="hidden lg:flex h-8 w-8 p-0 bg-background text-foreground hover:bg-accent hover:text-accent-foreground border border-border"
         >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </Button>
@@ -83,11 +83,13 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           {menuItems.map((item) => (
             <Button
               key={item.id}
-              variant={activeTab === item.id ? "default" : "ghost"}
+              variant="ghost"
               className={cn(
-                "w-full mb-1 h-10 bg-white text-black border border-blue-600 flex justify-center",
-                collapsed && "px-2",
-                activeTab === item.id && "bg-blue-600 text-white hover:bg-blue-700 flex justify-center"
+                "w-full mb-1 h-10 flex justify-start transition-all",
+                collapsed && "px-2 justify-center",
+                activeTab === item.id 
+                  ? "bg-primary/10 text-primary font-medium hover:bg-primary/20 hover:text-primary" 
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
               onClick={
                 () => {
@@ -96,7 +98,9 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 }
               }
             >
-              <item.icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
+              <div className={cn("relative flex items-center justify-center", !collapsed && "mr-3")}>
+                <item.icon className="relative h-4 w-4 z-10" />
+              </div>
               {!collapsed && (
                 <>
                   <span className="flex-1 text-left">{item.label}</span>
@@ -117,7 +121,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         <Button
           variant="ghost"
           className={cn(
-            "w-full flex items-center text-red-600 hover:text-red-700 hover:bg-red-50",
+            "w-full flex items-center text-destructive hover:text-destructive hover:bg-destructive/10",
             collapsed ? "justify-center px-0" : "justify-start"
           )}
           onClick={handleLogout}

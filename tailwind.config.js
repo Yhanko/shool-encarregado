@@ -9,6 +9,21 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Hanken Grotesk', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      spacing: {
+        base: '4px',
+        xs: '4px',
+        sm: '8px',
+        md: '16px',
+        lg: '24px',
+        xl: '32px',
+        'sidebar-width': '260px',
+        'grid-gutter': '20px',
+        'grid-margin': '24px',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

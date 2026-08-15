@@ -303,7 +303,7 @@ export function Chat() {
                       onKeyPress={(e) => e.key === 'Enter' && enviarMensagem()}
                       className="flex-1"
                     />
-                    <Button onClick={enviarMensagem} className='bg-green-500 hover:bg-green-600'>
+                    <Button onClick={enviarMensagem}>
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>

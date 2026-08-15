@@ -26,19 +26,19 @@ export function Header({ onMenuClick }: HeaderProps) {
   const nomeAbreviado = user?.name ? user.name.split(' ')[0] : 'Usuário';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 w-full">
+    <header className="bg-background border-b border-border px-4 md:px-6 py-4 w-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {onMenuClick && (
-            <Button variant="outline" size="icon" className="lg:hidden bg-white text-black border-gray-200 hover:bg-gray-50 hover:text-black" onClick={onMenuClick}>
+            <Button variant="outline" size="icon" className="lg:hidden" onClick={onMenuClick}>
               <Menu className="h-6 w-6" />
             </Button>
           )}
           <div>
-            <h2 className="text-xl lg:text-2xl font-semibold text-gray-900">
+            <h2 className="text-xl lg:text-2xl font-semibold text-foreground">
               Bem-vindo, {nomeAbreviado}!
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {new Date().toLocaleDateString('pt-BR', {
                 weekday: 'long',
                 year: 'numeric',
@@ -50,10 +50,10 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="relative text-blue-600 hover:text-blue-600 bg-transparent">
+          <Button variant="ghost" size="sm" className="relative text-foreground hover:text-primary">
             <Bell className="h-5 w-5" />
             {notificacoesNaoLidas > 0 && (
-              <Badge className="absolute left-6 top-1 h-3 w-3 p-0 text-xs bg-red-500 rounded-full flex items-center justify-center">
+              <Badge variant="destructive" className="absolute left-6 top-1 h-4 w-4 p-0 text-[10px] rounded-full flex items-center justify-center">
                 {notificacoesNaoLidas}
               </Badge>
             )}
@@ -61,9 +61,9 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-border hover:bg-accent">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-blue-600 text-white font-bold">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                     {user?.name ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
                   </AvatarFallback>
                 </Avatar>

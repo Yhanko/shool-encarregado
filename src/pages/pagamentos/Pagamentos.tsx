@@ -20,6 +20,23 @@ import {
 } from '../../lib/icons';
 import { useParent } from '@/contexts/ParentContext';
 import { Pagamento } from '@/types';
+import { z } from "zod";
+import { cn } from "@/lib/utils";
+
+const pagamentoSchema = z.object({
+  metodoPagamento: z.enum(['multicaixa', 'transferencia', 'dinheiro'], { 
+    errorMap: () => ({ message: "Selecione um método válido." }) 
+  }),
+  file: z.any().nullable()
+}).superRefine((data, ctx) => {
+  if (data.metodoPagamento !== 'dinheiro' && !data.file) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "O comprovativo é obrigatório para este método.",
+      path: ["file"]
+    });
+  }
+});
 
 export function Pagamentos() {
   const { pagamentos, educandos } = useParent();
@@ -232,7 +249,7 @@ export function Pagamentos() {
                               {(pagamento.status === 'pendente' || pagamento.status === 'atrasado') && (
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button size="sm" className='bg-orange-500 hover:bg-orange-600'>Pagar</Button>
+                                    <Button size="sm" onClick={() => {/* Lógica futura de pagamento */}}>Pagar</Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
@@ -309,7 +326,7 @@ export function Pagamentos() {
                             
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button className="w-full mt-4 bg-green-600 hover:bg-green-500">
+                                <Button className="w-full mt-4">
                                   <CreditCard className="mr-2 h-4 w-4" />
                                   Pagar Agora
                                 </Button>
@@ -392,13 +409,25 @@ function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, o
   const [metodoPagamento, setMetodoPagamento] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const educando = educandos.find(e => e.id === pagamento.educandoId);
 
   const handleSubmit = async () => {
-    if (!metodoPagamento) return;
+    setErrors({});
     
-    // For 'dinheiro', we might not require a file. Let's assume we don't.
-    // But for 'transferencia' and 'multicaixa', we do need one (or at least it's recommended).
+    const result = pagamentoSchema.safeParse({ 
+      metodoPagamento: metodoPagamento || undefined, 
+      file 
+    });
+    
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0].toString()] = err.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -446,8 +475,8 @@ function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, o
 
       <div>
         <Label htmlFor="metodo">Método de Pagamento</Label>
-        <Select value={metodoPagamento} onValueChange={setMetodoPagamento}>
-          <SelectTrigger>
+        <Select value={metodoPagamento} onValueChange={(val) => {setMetodoPagamento(val); setErrors(prev => ({...prev, metodoPagamento: '', file: ''}))}}>
+          <SelectTrigger className={cn(errors.metodoPagamento ? "border-destructive focus:ring-destructive" : "")}>
             <SelectValue placeholder="Selecione o método" />
           </SelectTrigger>
           <SelectContent>
@@ -471,6 +500,7 @@ function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, o
             </SelectItem>
           </SelectContent>
         </Select>
+        {errors.metodoPagamento && <p className="text-xs text-destructive mt-1">{errors.metodoPagamento}</p>}
       </div>
 
       {metodoPagamento === 'multicaixa' && (
@@ -486,9 +516,10 @@ function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, o
           <input 
             id="comprovativo-mc" 
             type="file" 
-            className="w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className={cn("w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100", errors.file ? "p-1 rounded border border-destructive" : "")} 
+            onChange={(e) => {setFile(e.target.files?.[0] || null); setErrors(prev => ({...prev, file: ''}))}}
           />
+          {errors.file && <p className="text-xs text-destructive mt-1">{errors.file}</p>}
         </div>
       )}
 
@@ -505,16 +536,17 @@ function FormularioPagamento({ pagamento, onSuccess }: { pagamento: Pagamento, o
           <input 
             id="comprovativo-tr" 
             type="file" 
-            className="w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className={cn("w-full mt-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100", errors.file ? "p-1 rounded border border-destructive" : "")}
+            onChange={(e) => {setFile(e.target.files?.[0] || null); setErrors(prev => ({...prev, file: ''}))}}
           />
+          {errors.file && <p className="text-xs text-destructive mt-1">{errors.file}</p>}
         </div>
       )}
 
       <div className="flex space-x-2 pt-4">
         <Button 
-          className="flex-1 bg-green-600 hover:bg-green-500" 
-          disabled={!metodoPagamento || isSubmitting || (metodoPagamento !== 'dinheiro' && !file)}
+          className="flex-1" 
+          disabled={isSubmitting}
           onClick={handleSubmit}
         >
           {isSubmitting ? 'Processando...' : (

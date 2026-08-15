@@ -33,6 +33,7 @@ export function ParentProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const token = useAuthStore((state) => state.token);
+  const setUser = useAuthStore((state) => state.setUser);
 
   const fetchParentData = async () => {
     if (!token) {
@@ -44,6 +45,13 @@ export function ParentProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       // 1. Fetch parent profile (includes children)
       const profile = await parentService.getProfile();
+      setUser({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: profile.role || 'parent',
+        institutionId: profile.institutionId || ''
+      });
       
       const rawChildren = profile.children || [];
       const allEducandos: Educando[] = [];

@@ -12,7 +12,7 @@ export function Layout() {
 
   return (
     <ParentProvider>
-      <div className="flex h-screen w-screen bg-gray-50">
+      <div className="flex h-screen w-screen bg-background">
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex h-full">
           <Sidebar activeTab={activeTab} onTabChange={() => { }} />
@@ -20,7 +20,7 @@ export function Layout() {
 
         {/* Mobile Sidebar via Sheet */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetContent side="left" className="p-0 w-64">
+          <SheetContent side="left" className="p-0 w-64 bg-background">
             <Sidebar activeTab={activeTab} onTabChange={() => setIsMobileMenuOpen(false)} />
           </SheetContent>
         </Sheet>
@@ -28,7 +28,7 @@ export function Layout() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
 
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-muted/20">
             <Outlet />
           </main>
         </div>
