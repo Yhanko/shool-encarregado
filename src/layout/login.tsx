@@ -222,7 +222,7 @@ export function Login() {
 
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer"
+                className="w-full bg-[#9b87f5] hover:bg-[#8b77e5] text-white hover:cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? <span key="loading">A entrar...</span> : <span key="idle">Entrar</span>}
@@ -247,7 +247,7 @@ export function Login() {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer"
+                className="w-full bg-[#9b87f5] hover:bg-[#8b77e5] text-white hover:cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? <span key="loading">A verificar...</span> : <span key="idle">Verificar Conta</span>}
@@ -294,7 +294,7 @@ export function Login() {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer"
+                className="w-full bg-[#9b87f5] hover:bg-[#8b77e5] text-white hover:cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? <span key="loading">A redefinir...</span> : <span key="idle">Redefinir Senha</span>}
