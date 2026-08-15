@@ -60,14 +60,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       collapsed ? "w-16" : "w-64"
     )}>
       <div className="flex items-center justify-between p-4 border-b">
-        {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <GraduationCap className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Portal do Encarregado</p>
-            </div>
-          </div>
-        )}
         <Button
           variant="ghost"
           size="sm"
@@ -87,8 +79,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               className={cn(
                 "w-full mb-1 h-10 flex justify-start transition-all",
                 collapsed && "px-2 justify-center",
-                activeTab === item.id 
-                  ? "bg-primary/10 text-primary font-medium hover:bg-primary/20 hover:text-primary" 
+                activeTab === item.id
+                  ? "bg-primary/10 text-primary font-medium hover:bg-primary/20 hover:text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
               onClick={

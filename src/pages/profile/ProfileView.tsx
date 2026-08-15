@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,30 @@ export function ProfileView() {
   const [saveError, setSaveError] = useState('');
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [pwdErrors, setPwdErrors] = useState<Record<string, string>>({});
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      const updatedUser = await parentService.uploadAvatar(file);
+      // Backend might return the full user or just the avatar URL, we handle both defensively:
+      const newAvatar = updatedUser?.avatar || updatedUser?.url || updatedUser || '';
+      setUser({ ...user!, avatar: newAvatar });
+      toast.success("Foto de perfil atualizada com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao atualizar foto de perfil.");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -161,18 +186,31 @@ export function ProfileView() {
 
           {/* Avatar card */}
           <Card className="overflow-hidden">
-            <div className="h-24 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600" />
+            <div className="h-24" />
             <CardContent className="pt-0 pb-6 text-center">
               <div className="relative inline-block -mt-12 mb-4">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg">
-                  {initials}
+                <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg overflow-hidden">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    initials
+                  )}
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                />
                 <Button
                   size="sm"
                   className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0 shadow"
                   variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
                 >
-                  <Camera className="w-3 h-3" />
+                  {isUploadingAvatar ? <Loader2 className="w-3 h-3 animate-spin text-gray-500" /> : <Camera className="w-3 h-3 text-gray-700" />}
                 </Button>
               </div>
               <h2 className="text-xl font-bold text-gray-900">{user?.name || '—'}</h2>
@@ -326,7 +364,7 @@ export function ProfileView() {
                     <div>
                       <Input
                         value={editedData.name}
-                        onChange={(e) => {setEditedData({ ...editedData, name: e.target.value }); setProfileErrors(p => ({...p, name: ''}))}}
+                        onChange={(e) => { setEditedData({ ...editedData, name: e.target.value }); setProfileErrors(p => ({ ...p, name: '' })) }}
                         className={cn("mt-1", profileErrors.name ? "border-destructive focus-visible:ring-destructive" : "")}
                         disabled={!isEditing}
                       />
@@ -346,7 +384,7 @@ export function ProfileView() {
                       <Input
                         type="email"
                         value={editedData.email}
-                        onChange={(e) => {setEditedData({ ...editedData, email: e.target.value }); setProfileErrors(p => ({...p, email: ''}))}}
+                        onChange={(e) => { setEditedData({ ...editedData, email: e.target.value }); setProfileErrors(p => ({ ...p, email: '' })) }}
                         className={cn("mt-1", profileErrors.email ? "border-destructive focus-visible:ring-destructive" : "")}
                         disabled={!isEditing}
                       />
@@ -573,7 +611,7 @@ export function ProfileView() {
                             <Input
                               type={showPasswords.current ? "text" : "password"}
                               value={passwordData.currentPassword}
-                              onChange={(e) => {setPasswordData({ ...passwordData, currentPassword: e.target.value }); setPwdErrors(p => ({...p, currentPassword: ''}))}}
+                              onChange={(e) => { setPasswordData({ ...passwordData, currentPassword: e.target.value }); setPwdErrors(p => ({ ...p, currentPassword: '' })) }}
                               className={cn("pr-10", pwdErrors.currentPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
                             <button
@@ -592,7 +630,7 @@ export function ProfileView() {
                             <Input
                               type={showPasswords.new ? "text" : "password"}
                               value={passwordData.newPassword}
-                              onChange={(e) => {setPasswordData({ ...passwordData, newPassword: e.target.value }); setPwdErrors(p => ({...p, newPassword: ''}))}}
+                              onChange={(e) => { setPasswordData({ ...passwordData, newPassword: e.target.value }); setPwdErrors(p => ({ ...p, newPassword: '' })) }}
                               className={cn("pr-10", pwdErrors.newPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
                             <button
@@ -611,7 +649,7 @@ export function ProfileView() {
                             <Input
                               type={showPasswords.confirm ? "text" : "password"}
                               value={passwordData.confirmPassword}
-                              onChange={(e) => {setPasswordData({ ...passwordData, confirmPassword: e.target.value }); setPwdErrors(p => ({...p, confirmPassword: ''}))}}
+                              onChange={(e) => { setPasswordData({ ...passwordData, confirmPassword: e.target.value }); setPwdErrors(p => ({ ...p, confirmPassword: '' })) }}
                               className={cn("pr-10", pwdErrors.confirmPassword ? "border-destructive focus-visible:ring-destructive" : "")}
                             />
                             <button

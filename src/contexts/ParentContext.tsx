@@ -50,7 +50,8 @@ export function ParentProvider({ children }: { children: ReactNode }) {
         name: profile.name,
         email: profile.email,
         role: profile.role || 'parent',
-        institutionId: profile.institutionId || ''
+        institutionId: profile.institutionId || '',
+        avatar: profile.avatar || ''
       });
       
       const rawChildren = profile.children || [];

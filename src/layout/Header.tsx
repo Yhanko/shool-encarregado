@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -63,6 +63,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-border hover:bg-accent">
                 <Avatar className="h-10 w-10">
+                  <AvatarImage src={user?.avatar} alt={user?.name || 'Avatar'} />
                   <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                     {user?.name ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
                   </AvatarFallback>

@@ -19,6 +19,27 @@ export const parentService = {
     }
   },
 
+  uploadAvatar: async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // 1. Fazer o upload do ficheiro
+      const uploadResponse = await api.post('/uploads', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const avatarUrl = uploadResponse.data.url || uploadResponse.data;
+      
+      // 2. Atualizar o utilizador
+      const updateResponse = await api.patch('/users/me', { avatar: avatarUrl });
+      
+      return updateResponse.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   changePassword: async (currentPassword: string, newPassword: string) => {
     try {
       const response = await api.patch('/users/me/password', { currentPassword, newPassword });

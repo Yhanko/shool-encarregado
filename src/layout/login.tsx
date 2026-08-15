@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Mail, Lock, Eye, EyeOff, GraduationCap, ArrowLeft } from "../lib/icons";
+import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "../lib/icons";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
