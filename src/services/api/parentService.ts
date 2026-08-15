@@ -24,12 +24,17 @@ export const parentService = {
       const formData = new FormData();
       formData.append('file', file);
       
-      // 1. Fazer o upload do ficheiro
-      const uploadResponse = await api.post('/uploads', formData, {
+      // 1. Fazer o upload do ficheiro para o Cloudinary (como configurado no backend)
+      const uploadResponse = await api.post('/uploads/cloudinary', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      const avatarUrl = uploadResponse.data.url || uploadResponse.data;
+      // O backend retorna um objeto com 'path' sendo a URL (seja Cloudinary ou local)
+      const avatarUrl = uploadResponse.data.path || uploadResponse.data.url || (typeof uploadResponse.data === 'string' ? uploadResponse.data : null);
+      
+      if (!avatarUrl) {
+        throw new Error('Falha ao obter URL da imagem após o upload.');
+      }
       
       // 2. Atualizar o utilizador
       const updateResponse = await api.patch('/users/me', { avatar: avatarUrl });
