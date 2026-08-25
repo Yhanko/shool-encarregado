@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -81,6 +82,7 @@ export function Pagamentos() {
   });
 
   const totalPago = pagamentos.filter(p => p.status === 'pago').reduce((acc, p) => acc + p.valor, 0);
+  const totalProcessamento = pagamentos.filter(p => p.status === 'processamento').reduce((acc, p) => acc + p.valor, 0);
   const totalPendente = pagamentos.filter(p => p.status === 'pendente').reduce((acc, p) => acc + p.valor, 0);
   const totalAtrasado = pagamentos.filter(p => p.status === 'atrasado').reduce((acc, p) => acc + p.valor, 0);
 
@@ -95,10 +97,11 @@ export function Pagamentos() {
           </h1>
           <p className="text-muted-foreground">Gerencie os pagamentos dos seus educandos</p>
         </div>
+        <NovoPagamentoDialog />
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
@@ -110,6 +113,21 @@ export function Pagamentos() {
             </div>
             <p className="text-xs text-muted-foreground">
               {pagamentos.filter(p => p.status === 'pago').length} pagamentos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processamento</CardTitle>
+            <Clock className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {totalProcessamento.toLocaleString()} Kz
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {pagamentos.filter(p => p.status === 'processamento').length} pagamentos
             </p>
           </CardContent>
         </Card>
@@ -401,6 +419,164 @@ export function Pagamentos() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function NovoPagamentoDialog() {
+  const { educandos, createPayment, instituicao } = useParent();
+  const [isOpen, setIsOpen] = useState(false);
+  const [tipo, setTipo] = useState('');
+  const [educandoId, setEducandoId] = useState('');
+  const [valor, setValor] = useState('');
+  const [metodoPagamento, setMetodoPagamento] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSubmit = async () => {
+    setErrors({});
+    const newErrors: Record<string, string> = {};
+    if (!tipo) newErrors.tipo = "Selecione o tipo de pagamento.";
+    if (!educandoId) newErrors.educandoId = "Selecione o educando.";
+    if (!valor || isNaN(Number(valor)) || Number(valor) <= 0) newErrors.valor = "Introduza um valor válido.";
+    if (!metodoPagamento) newErrors.metodoPagamento = "Selecione o método de pagamento.";
+    if (metodoPagamento !== 'dinheiro' && !file) newErrors.file = "Anexe o comprovativo.";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let proofUrl = '';
+      if (file) {
+         const { parentService } = await import('@/services/api/parentService');
+         const uploadResult = await parentService.uploadPaymentProof(file);
+         proofUrl = uploadResult?.url || uploadResult?.path || uploadResult;
+      }
+      
+      const paymentData = {
+        type: tipo === 'propina' ? 'tuition' : tipo === 'matricula' ? 'enrollment' : 'fee',
+        amount: Number(valor),
+        studentId: educandoId,
+        description: tipo,
+        status: proofUrl ? 'processing' : 'pending',
+        paymentMethod: metodoPagamento,
+        proofUrl: proofUrl || undefined
+      };
+
+      await createPayment(paymentData);
+      setIsOpen(false);
+      
+      // Reset
+      setTipo(''); setEducandoId(''); setValor(''); setMetodoPagamento(''); setFile(null);
+    } catch (error) {
+      console.error("Erro ao criar pagamento:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <CreditCard className="mr-2 h-4 w-4" />
+          Novo Pagamento
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Novo Pagamento</DialogTitle>
+          <DialogDescription>Crie um novo pagamento para o seu educando.</DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Educando</Label>
+            <Select value={educandoId} onValueChange={(val) => {setEducandoId(val); setErrors(p => ({...p, educandoId: ''}))}}>
+              <SelectTrigger className={errors.educandoId ? "border-destructive" : ""}>
+                <SelectValue placeholder="Selecione o educando" />
+              </SelectTrigger>
+              <SelectContent>
+                {educandos.map(e => (
+                  <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.educandoId && <p className="text-xs text-destructive">{errors.educandoId}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>O que está a pagar?</Label>
+            <Select value={tipo} onValueChange={(val) => {setTipo(val); setErrors(p => ({...p, tipo: ''}))}}>
+              <SelectTrigger className={errors.tipo ? "border-destructive" : ""}>
+                <SelectValue placeholder="Selecione o que vai pagar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="propina">Propina</SelectItem>
+                <SelectItem value="matricula">Matrícula</SelectItem>
+                <SelectItem value="confirmacao">Confirmação</SelectItem>
+                <SelectItem value="material">Material Escolar</SelectItem>
+                <SelectItem value="uniforme">Uniforme</SelectItem>
+                <SelectItem value="bata">Bata</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.tipo && <p className="text-xs text-destructive">{errors.tipo}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Valor (Kz)</Label>
+            <Input 
+              type="number" 
+              placeholder="Ex: 15000" 
+              value={valor}
+              onChange={(e) => {setValor(e.target.value); setErrors(p => ({...p, valor: ''}))}}
+              className={errors.valor ? "border-destructive" : ""}
+            />
+            {errors.valor && <p className="text-xs text-destructive">{errors.valor}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Método de Pagamento</Label>
+            <Select value={metodoPagamento} onValueChange={(val) => {setMetodoPagamento(val); setErrors(p => ({...p, metodoPagamento: '', file: ''}))}}>
+              <SelectTrigger className={errors.metodoPagamento ? "border-destructive" : ""}>
+                <SelectValue placeholder="Selecione o método" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="multicaixa"><div className="flex items-center"><Smartphone className="mr-2 h-4 w-4" />Multicaixa Express</div></SelectItem>
+                <SelectItem value="transferencia"><div className="flex items-center"><Building2 className="mr-2 h-4 w-4" />Transferência Bancária</div></SelectItem>
+                <SelectItem value="dinheiro"><div className="flex items-center"><DollarSign className="mr-2 h-4 w-4" />Dinheiro (Presencial)</div></SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.metodoPagamento && <p className="text-xs text-destructive">{errors.metodoPagamento}</p>}
+          </div>
+
+          {metodoPagamento === 'multicaixa' && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">Multicaixa Express</h4>
+              <p className="text-sm text-blue-700 mb-3">Ref: {instituicao?.paymentReference || 'MC-12345678'}</p>
+              <input type="file" className={cn("w-full text-sm", errors.file ? "border-destructive" : "")} onChange={(e) => {setFile(e.target.files?.[0] || null); setErrors(p => ({...p, file: ''}))}} />
+              {errors.file && <p className="text-xs text-destructive mt-1">{errors.file}</p>}
+            </div>
+          )}
+
+          {metodoPagamento === 'transferencia' && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h4 className="font-medium text-green-800 mb-2">Transferência Bancária</h4>
+              <p className="text-sm text-green-700 mb-1">IBAN: {instituicao?.iban || 'AO06 0040 0000 1234 5678 1011 2'}</p>
+              <input type="file" className={cn("w-full text-sm mt-2", errors.file ? "border-destructive" : "")} onChange={(e) => {setFile(e.target.files?.[0] || null); setErrors(p => ({...p, file: ''}))}} />
+              {errors.file && <p className="text-xs text-destructive mt-1">{errors.file}</p>}
+            </div>
+          )}
+
+          <Button className="w-full mt-4" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Processando...' : 'Confirmar e Enviar'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

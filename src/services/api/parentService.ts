@@ -72,6 +72,15 @@ export const parentService = {
     }
   },
 
+  createPayment: async (data: any) => {
+    try {
+      const response = await api.post('/finance/payments', data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   uploadPaymentProof: async (file: File) => {
     try {
       const formData = new FormData();

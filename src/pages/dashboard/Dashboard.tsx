@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   BarChart,
@@ -47,8 +46,11 @@ export function Dashboard() {
   };
 
   // Process data for charts
+  const pagamentosProcessamento = pagamentos.filter(p => p.status === 'processamento').length;
+  
   const statusPagamentos = [
     { name: 'Pagos', value: pagamentos.filter(p => p.status === 'pago').length, color: '#10b981' },
+    { name: 'Processamento', value: pagamentosProcessamento, color: '#3b82f6' },
     { name: 'Pendentes', value: pagamentosPendentes, color: '#f59e0b' },
     { name: 'Atrasados', value: pagamentosAtrasados, color: '#ef4444' }
   ].filter(s => s.value > 0);
@@ -162,9 +164,6 @@ export function Dashboard() {
                         <span className={`font-bold ${statusColor}`}>{media}</span>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Ver Detalhes
-                    </Button>
                   </div>
                 );
               })}

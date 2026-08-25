@@ -18,6 +18,8 @@ interface ParentContextType {
   submitPaymentProof: (id: string, proofUrl: string, method: string) => Promise<void>;
   markChatAsRead: (userId: string) => Promise<void>;
   fetchUnreadMessages: () => Promise<void>;
+  createPayment: (data: any) => Promise<void>;
+  fetchParentData: () => Promise<void>;
 }
 
 const ParentContext = createContext<ParentContextType | undefined>(undefined);
@@ -251,16 +253,6 @@ export function ParentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const submitPaymentProof = async (id: string, proofUrl: string, method: string) => {
-    try {
-      await parentService.submitPaymentProof(id, proofUrl, method);
-      await fetchParentData(); // Reloads all data including payments
-    } catch (error) {
-      console.error("Erro ao submeter comprovativo", error);
-      throw error;
-    }
-  };
-
   const markChatAsRead = async (userId: string) => {
     try {
       await parentService.markConversationAsRead(userId);
@@ -270,11 +262,31 @@ export function ParentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const submitPaymentProof = async (id: string, proofUrl: string, method: string) => {
+    try {
+      await parentService.submitPaymentProof(id, proofUrl, method);
+      setPagamentos(prev => prev.map(p => p.id === id ? { ...p, status: 'processamento', recibo: proofUrl, metodoPagamento: method } : p));
+    } catch (error) {
+      console.error("Erro ao enviar comprovativo", error);
+      throw error;
+    }
+  };
+
+  const createPayment = async (data: any) => {
+    try {
+      await parentService.createPayment(data);
+      await fetchParentData();
+    } catch (error) {
+      console.error("Erro ao criar pagamento", error);
+      throw error;
+    }
+  };
+
   return (
-    <ParentContext.Provider value={{
-      educandos,
-      pagamentos,
-      notificacoes,
+    <ParentContext.Provider value={{ 
+      educandos, 
+      pagamentos, 
+      notificacoes, 
       atividades,
       desempenhos,
       mensagensNaoLidas,
@@ -284,7 +296,9 @@ export function ParentProvider({ children }: { children: ReactNode }) {
       markAllAsRead,
       submitPaymentProof,
       markChatAsRead,
-      fetchUnreadMessages
+      fetchUnreadMessages,
+      createPayment,
+      fetchParentData
     }}>
       {children}
     </ParentContext.Provider>
