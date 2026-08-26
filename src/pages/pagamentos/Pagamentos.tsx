@@ -260,7 +260,7 @@ export function Pagamentos() {
                           <TableCell>
                             <div className="flex space-x-2">
                               {pagamento.status === 'pago' && pagamento.recibo && (
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => window.open(pagamento.recibo, '_blank')} title="Baixar Recibo">
                                   <Download className="h-4 w-4" />
                                 </Button>
                               )}
@@ -405,10 +405,12 @@ export function Pagamentos() {
                         <div className="text-right">
                           <p className="font-bold">{pagamento.valor.toLocaleString()} Kz</p>
                           <p className="text-xs text-muted-foreground">{pagamento.metodoPagamento}</p>
-                          <Button variant="outline" size="sm" className="mt-2">
-                            <Download className="mr-2 h-4 w-4" />
-                            Recibo
-                          </Button>
+                          {pagamento.recibo && (
+                            <Button variant="outline" size="sm" className="mt-2" onClick={() => window.open(pagamento.recibo, '_blank')}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Recibo
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );

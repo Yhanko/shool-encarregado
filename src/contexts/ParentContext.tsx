@@ -147,8 +147,11 @@ export function ParentProvider({ children }: { children: ReactNode }) {
               ano: new Date(p.createdAt).getFullYear(),
               dataVencimento: p.createdAt,
               dataPagamento: p.paymentDate,
-              status: p.status === 'confirmed' ? 'pago' : p.status === 'processing' ? 'processamento' : p.status === 'pending' ? 'pendente' : 'atrasado',
-              recibo: p.proofUrl,
+              status: ['paid', 'confirmed', 'pago'].includes(p.status?.toLowerCase()) ? 'pago' : 
+                      ['processing', 'processamento'].includes(p.status?.toLowerCase()) ? 'processamento' : 
+                      ['pending', 'pendente'].includes(p.status?.toLowerCase()) ? 'pendente' : 
+                      ['cancelled', 'cancelado'].includes(p.status?.toLowerCase()) ? 'cancelado' : 'atrasado',
+              recibo: p.proofUrl || p.receiptUrl || p.recibo,
               metodoPagamento: p.paymentMethod,
               educandoId: child.id,
            });
