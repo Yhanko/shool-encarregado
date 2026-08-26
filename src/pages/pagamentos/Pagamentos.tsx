@@ -423,7 +423,7 @@ export function Pagamentos() {
 }
 
 function NovoPagamentoDialog() {
-  const { educandos, createPayment, instituicao } = useParent();
+  const { educandos, createPayment, submitPaymentProof, instituicao } = useParent();
   const [isOpen, setIsOpen] = useState(false);
   const [tipo, setTipo] = useState('');
   const [educandoId, setEducandoId] = useState('');
@@ -461,12 +461,14 @@ function NovoPagamentoDialog() {
         amount: Number(valor),
         studentId: educandoId,
         description: tipo,
-        status: proofUrl ? 'processing' : 'pending',
-        paymentMethod: metodoPagamento,
-        proofUrl: proofUrl || undefined
       };
 
-      await createPayment(paymentData);
+      const createdPayment = await createPayment(paymentData);
+      
+      if (proofUrl && createdPayment && createdPayment.id) {
+         await submitPaymentProof(createdPayment.id, proofUrl, metodoPagamento);
+      }
+
       setIsOpen(false);
       
       // Reset

@@ -18,7 +18,7 @@ interface ParentContextType {
   submitPaymentProof: (id: string, proofUrl: string, method: string) => Promise<void>;
   markChatAsRead: (userId: string) => Promise<void>;
   fetchUnreadMessages: () => Promise<void>;
-  createPayment: (data: any) => Promise<void>;
+  createPayment: (data: any) => Promise<any>;
   fetchParentData: () => Promise<void>;
 }
 
@@ -274,8 +274,9 @@ export function ParentProvider({ children }: { children: ReactNode }) {
 
   const createPayment = async (data: any) => {
     try {
-      await parentService.createPayment(data);
+      const response = await parentService.createPayment(data);
       await fetchParentData();
+      return response;
     } catch (error) {
       console.error("Erro ao criar pagamento", error);
       throw error;
