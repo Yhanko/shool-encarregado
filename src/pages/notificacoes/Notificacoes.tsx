@@ -97,10 +97,6 @@ export function Notificacoes() {
             <Eye className="mr-2 h-4 w-4" />
             Marcar todas como lidas
           </Button>
-          <Button variant="outline" size="sm" onClick={() => toast.info('Funcionalidade de filtros avançados em desenvolvimento.')}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filtros
-          </Button>
         </div>
       </div>
 

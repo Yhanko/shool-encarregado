@@ -44,6 +44,14 @@ export function Pagamentos() {
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroEducando, setFiltroEducando] = useState<string>('todos');
 
+  const handleDownloadReceipt = (url: string) => {
+    if (!url) return;
+    const isAbsolute = url.startsWith('http://') || url.startsWith('https://');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    const finalUrl = isAbsolute ? url : `${apiUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    window.open(finalUrl, '_blank');
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pago': return CheckCircle;
@@ -259,7 +267,7 @@ export function Pagamentos() {
                           <TableCell>
                             <div className="flex space-x-2">
                               {pagamento.status === 'pago' && pagamento.recibo && (
-                                <Button variant="outline" size="sm" onClick={() => window.open(pagamento.recibo, '_blank')} title="Baixar Recibo">
+                                <Button variant="outline" size="sm" onClick={() => handleDownloadReceipt(pagamento.recibo!)} title="Baixar Recibo">
                                   <Download className="h-4 w-4" />
                                 </Button>
                               )}
@@ -405,7 +413,7 @@ export function Pagamentos() {
                           <p className="font-bold">{pagamento.valor.toLocaleString()} Kz</p>
                           <p className="text-xs text-muted-foreground">{pagamento.metodoPagamento}</p>
                           {pagamento.recibo && (
-                            <Button variant="outline" size="sm" className="mt-2" onClick={() => window.open(pagamento.recibo, '_blank')}>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={() => handleDownloadReceipt(pagamento.recibo!)}>
                               <Download className="mr-2 h-4 w-4" />
                               Recibo
                             </Button>
