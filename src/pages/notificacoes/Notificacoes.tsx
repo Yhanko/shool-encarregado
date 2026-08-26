@@ -14,7 +14,6 @@ import {
   Users,
   Eye,
   Check,
-  Filter,
   MessageCircle,
   AlertTriangle
 } from '../../lib/icons';
@@ -149,12 +148,6 @@ export function Notificacoes() {
           </TabsTrigger>
           <TabsTrigger value="nota" onClick={() => setFiltroTipo('nota')}>
             Notas
-          </TabsTrigger>
-          <TabsTrigger value="mensagem" onClick={() => setFiltroTipo('mensagem')}>
-            Mensagens
-          </TabsTrigger>
-          <TabsTrigger value="falta" onClick={() => setFiltroTipo('falta')}>
-            Faltas
           </TabsTrigger>
         </TabsList>
 
@@ -438,7 +431,6 @@ export function Notificacoes() {
                         )}
                         <div className="flex items-center justify-between mt-3">
                           <Badge variant="outline">Nota</Badge>
-                          <Button size="sm" onClick={() => navigate('/notas')}>Ver Notas</Button>
                         </div>
                       </div>
                     );
