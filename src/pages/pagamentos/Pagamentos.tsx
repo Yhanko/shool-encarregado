@@ -166,7 +166,6 @@ export function Pagamentos() {
       <Tabs defaultValue="lista" className="space-y-4">
         <TabsList>
           <TabsTrigger value="lista">Lista de Pagamentos</TabsTrigger>
-          <TabsTrigger value="realizar">Realizar Pagamento</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
 
