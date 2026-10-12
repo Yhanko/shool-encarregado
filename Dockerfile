@@ -43,7 +43,8 @@ ARG VITE_API_URL=https://school-api-production-a1c6.up.railway.app
 ENV VITE_API_URL=$VITE_API_URL
 
 # Executa a compilação do TypeScript e bundling do Vite para produção
-RUN npm run build
+# e armazena a URL padrão de compilação para injeção dinâmica em runtime se necessário
+RUN npm run build && echo "$VITE_API_URL" > /app/dist/.built_api_url
 
 # ------------------------------------------------------------------------------
 # 4. Runner Stage: Servidor Web Nginx seguro e sem privilégios (Non-Root)
@@ -55,18 +56,38 @@ LABEL maintainer="Yhanko Tech" \
       project="shool-encarregado" \
       description="Yhanko Educa Portal do Encarregado - Frontend de Alta Performance"
 
+USER root
+
+# Instala curl para garantir que as ferramentas de healthcheck (curl e wget) estejam disponíveis
+RUN apk add --no-cache curl
+
 # Copia a configuração endurecida e customizada do Nginx para SPA
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copia os arquivos compilados do estágio builder para o diretório raiz do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Porta não-privilegiada do container
-EXPOSE 8080
+# Copia os scripts de entrypoint e healthcheck dinâmico
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker-healthcheck.sh /docker-healthcheck.sh
 
-# Verificação de integridade e saúde da aplicação (Healthcheck nativo e leve com wget)
+# Normaliza quebras de linha CRLF para LF, adiciona permissão de execução e transfere propriedade para UID 101 (nginx)
+RUN sed -i 's/\r$//' /docker-entrypoint.sh /docker-healthcheck.sh && \
+    chmod +x /docker-entrypoint.sh /docker-healthcheck.sh && \
+    chown -R 101:101 /usr/share/nginx/html /etc/nginx/conf.d /docker-entrypoint.sh /docker-healthcheck.sh
+
+# Retorna estritamente para o usuário não-root oficial do Nginx
+USER 101
+
+# Portas não-privilegiadas suportadas pelo container (padrão Nginx 8080, Coolify 3000, Compose 3004)
+EXPOSE 8080 3000 3004
+
+# Verificação de integridade e saúde dinâmica da aplicação
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
+  CMD /docker-healthcheck.sh || exit 1
+
+# Define o entrypoint que lê e injeta variáveis de ambiente antes de inicializar o servidor
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Inicializa o Nginx em foreground (executando como usuário não-root UID 101 'nginx')
 CMD ["nginx", "-g", "daemon off;"]

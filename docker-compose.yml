@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3004}:8080"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-https://school-api-production-a1c6.up.railway.app}
     env_file:
       - path: .env
         required: false
@@ -24,7 +26,7 @@ services:
           cpus: "0.1"
           memory: 64M
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "/docker-healthcheck.sh"]
       interval: 30s
       timeout: 5s
       retries: 3

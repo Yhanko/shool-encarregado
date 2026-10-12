@@ -1,81 +1,92 @@
-# Yhanko Educa - Portal do Encarregado (Frontend)
+# 👨‍👩‍👧‍👦 Yhanko Educa - Portal do Encarregado (Frontend)
 
-Frontend web SPA desenvolvido em **React 18**, **TypeScript**, **Vite** e **TailwindCSS**, containerizado com foco em **alta performance**, **segurança máxima (Non-Root)**, **resiliência de rede** e **tamanho ultraleve (~31MB)**.
+Frontend web SPA do Portal do Encarregado de Educação para o ecossistema educacional **Yhanko Educa**, desenvolvido em **React 18**, **TypeScript**, **Vite**, **Tailwind CSS** e **Radix UI**, containerizado com foco em **alta performance**, **segurança máxima (Non-Root)**, **resiliência de rede** e total compatibilidade com **VPS (Coolify)**, **Docker Compose** e plataformas de nuvem.
 
 ---
 
-## 🚀 Destaques da Arquitetura Docker
+## 🚀 Arquitetura Docker de Produção
+
+A infraestrutura de container deste projeto foi concebida segundo as melhores práticas da indústria (12-Factor App, CIS Docker Benchmarks):
 
 1. **Multi-Stage Build Otimizado**:
-   - `base`: Node.js 22 Alpine minimalista.
-   - `deps`: Instalação de dependências limpa (`npm ci --prefer-offline`) utilizando cache nativo do Docker BuildKit (`--mount=type=cache,target=/root/.npm`) e configurações resilientes de retry para conexões instáveis.
+   - `base`: Node.js 22 Alpine (imagem minimalista oficial).
+   - `deps`: Instalação idempotente (`npm ci`) com cache BuildKit (`/root/.npm`) e políticas de tolerância a instabilidade de rede.
    - `builder`: Compilação de tipos (`tsc -b`) e bundling com Vite em chunks estáticos de produção.
-   - `runner`: Servidor Nginx unprivileged oficial (`nginxinc/nginx-unprivileged:alpine-slim`), sem runtime Node ou dependências de desenvolvimento no contêiner final.
-2. **Segurança Avançada (Hardened & Non-Root)**:
+   - `runner`: Servidor Nginx unprivileged oficial (`nginxinc/nginx-unprivileged:alpine-slim`), sem dependências de desenvolvimento.
+2. **Suporte a Variáveis de Ambiente em Runtime**:
+   - O script [`docker-entrypoint.sh`](docker-entrypoint.sh) permite alterar `VITE_API_URL` ao iniciar o container sem necessidade de recompilar a imagem Docker, atualizando os bundles compilados dinamicamente.
+3. **Portas Dinâmicas (`$PORT`) & VPS/Coolify**:
+   - Detecta e configura automaticamente a porta do Nginx quando atribuída por variáveis de ambiente (`PORT`), adaptando-se sem falhas a portas arbitrárias (ex: `3000`, `3004`, `8080`).
+4. **Healthcheck Dinâmico e Resiliente**:
+   - O script [`docker-healthcheck.sh`](docker-healthcheck.sh) utiliza `curl` e `wget`, identificando a porta ativa da aplicação e fornecendo fallbacks inteligentes para `/healthz` e `/`, prevenindo falhas de `Connection refused` e rollbacks automáticos.
+5. **Segurança Endurecida (Hardened & Non-Root)**:
    - Execução restrita sob usuário não-privilegiado `nginx` (`UID 101`).
-   - `server_tokens off`: Previne fingerprinting ocultando versões do Nginx.
-   - Cabeçalhos de segurança HTTP injetados em todas as respostas (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`).
-3. **Performance & Caching Inteligente**:
-   - **Gzip**: Compressão em tempo real ativada para HTML, CSS, JS, JSON e SVG.
-   - **Assets com Hash (/assets/*)**: Cache estático imutável por 1 ano (`Cache-Control: public, max-age=31536000, immutable`).
-   - **Index HTML (/index.html)**: Cache desativado (`no-store, no-cache, must-revalidate`) para garantir que os clientes recebam imediatamente novos deploys.
-   - **SPA Routing**: `try_files $uri $uri/ /index.html;` para suporte perfeito ao React Router em refresh de página.
-4. **Healthcheck Nativo**:
-   - Endpoint dedicado `/healthz` respondendo `200 healthy` sem poluir logs de acesso.
-   - Verificação automática integrada ao Docker daemon (`HEALTHCHECK`).
+   - `server_tokens off`: Oculta versões do Nginx.
+   - Cabeçalhos de proteção HTTP injetados em todas as respostas (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`).
+6. **Performance & Caching Inteligente**:
+   - Gzip (nível 6) ativado para textos, JS, CSS, JSON e SVG.
+   - Assets compilados do Vite (`/assets/*`) armazenados com cache imutável de 1 ano.
+   - `index.html` com `no-store, no-cache` para atualização instantânea em cada deploy.
+   - Roteamento SPA configurado (`try_files $uri $uri/ /index.html;`).
 
 ---
 
-## 🛠️ Comandos Rápidos
+## 🛠️ Variáveis de Ambiente & Portas
 
-### 1. Build da Imagem com Docker
-
-```bash
-# Build padrão (usando API de produção configurada)
-docker build -t shool-encarregado:latest .
-
-# Build customizando a URL da API backend via ARG
-docker build --build-arg VITE_API_URL="https://school-api-production-a1c6.up.railway.app" -t shool-encarregado:latest .
-```
-
-### 2. Executar Contêiner com Docker
-
-```bash
-docker run -d \
-  --name shool-encarregado-frontend \
-  -p 3004:8080 \
-  --restart unless-stopped \
-  shool-encarregado:latest
-```
-
-Acesse: `http://localhost:3004`
-Verificação de saúde: `http://localhost:3004/healthz`
+| Variável | Padrão | Descrição |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | `https://school-api-production-a1c6.up.railway.app` | URL base da API backend (suporta injeção em runtime) |
+| `PORT` | `3004` (host) / `8080` (container) | Porta em que o Nginx escuta (adaptável dinamicamente) |
 
 ---
 
-## 🐳 Orquestração com Docker Compose
+## 🐳 Executando com Docker
 
-O arquivo [`docker-compose.yml`](docker-compose.yml) já está pronto para uso com limites de memória/CPU e healthcheck configurados:
+### 1. Usando Docker Compose (Recomendado)
 
 ```bash
-# Iniciar em background com build automático
+# Iniciar o container em background com build
 docker compose up -d --build
 
-# Verificar logs em tempo real
+# Visualizar logs em tempo real
 docker compose logs -f shool-encarregado
 
-# Verificar status e integridade do contêiner
+# Checar status e integridade (healthy)
 docker compose ps
 
 # Parar serviços
 docker compose down
 ```
 
+Aceder localmente: [http://localhost:3004](http://localhost:3004)  
+Verificação de saúde: [http://localhost:3004/healthz](http://localhost:3004/healthz)
+
 ---
 
-## ⚙️ Variáveis de Ambiente & Build Arguments
+### 2. Usando Docker CLI
 
-| Variável | Padrão | Descrição |
-| :--- | :--- | :--- |
-| `VITE_API_URL` | `https://school-api-production-a1c6.up.railway.app` | URL base da API backend (consumida no build do Vite) |
-| `PORT` | `3004` | Porta mapeada no host para a porta interna `8080` do Nginx |
+#### Build da Imagem:
+```bash
+docker build -t yhanko/shool-encarregado:latest .
+```
+
+#### Executar Container (com injeção dinâmica de API em runtime):
+```bash
+docker run -d \
+  --name shool-encarregado-frontend \
+  -p 3004:8080 \
+  -e VITE_API_URL="http://seu-servidor-api:4000" \
+  --restart unless-stopped \
+  yhanko/shool-encarregado:latest
+```
+
+---
+
+## 🌐 Deploy no Coolify (VPS)
+
+1. Crie uma nova aplicação no Coolify apontando para este repositório (`shool-encarregado`).
+2. Defina o método de Build como **Dockerfile**.
+3. Em **Environment Variables**, adicione (se necessário):
+   - `VITE_API_URL=http://seu-backend-url`
+4. Em **Ports Exposes**, configure a porta desejada (ex: `3000` ou `8080`).
+5. O healthcheck do contêiner responderá com sucesso na primeira tentativa sem conflito de portas ou avisos de curl/wget ausentes.
